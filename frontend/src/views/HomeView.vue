@@ -1,23 +1,67 @@
 <template>
   <div class="home">
     <h2>欢迎使用AI旅行规划师</h2>
-    <el-card>
-      <p>这是一个基于AI的智能旅行规划应用</p>
-      <el-button type="primary" @click="$router.push('/travel-plans')">
-        查看旅行计划
-      </el-button>
-      <el-button @click="testBackendConnection">
-        测试后端连接
-      </el-button>
-    </el-card>
+    <p>开始规划您的智能旅行吧！</p>
+    
+    <el-row :gutter="20">
+      <el-col :span="8">
+        <el-card>
+          <h3>旅行计划</h3>
+          <p>查看和管理您的旅行计划</p>
+          <el-button type="primary" @click="$router.push('/travel-plans')">
+            查看旅行计划
+          </el-button>
+        </el-card>
+      </el-col>
+      
+      <el-col :span="8">
+        <el-card>
+          <h3>个人中心</h3>
+          <p>管理您的个人信息和设置</p>
+          <el-button @click="$router.push('/profile')">
+            查看个人中心
+          </el-button>
+        </el-card>
+      </el-col>
+      
+      <el-col :span="8">
+        <el-card>
+          <h3>系统状态</h3>
+          <p>检查后端服务连接状态</p>
+          <el-button @click="testBackendConnection">
+            测试后端连接
+          </el-button>
+          <p v-if="testResult" style="margin-top: 10px; font-size: 12px;">
+            {{ testResult }}
+          </p>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
+import { useAuthStore } from '@/stores'
 
+const router = useRouter()
+const authStore = useAuthStore()
 const testResult = ref('')
+
+// 页面加载时检查用户认证状态
+onMounted(async () => {
+  if (!authStore.isAuthenticated) {
+    router.push('/login')
+    return
+  }
+  
+  // 如果已登录但用户信息为空，获取用户信息
+  if (authStore.isAuthenticated && !authStore.user) {
+    await authStore.getUserProfile()
+  }
+})
 
 const testBackendConnection = async () => {
   try {
@@ -32,5 +76,24 @@ const testBackendConnection = async () => {
 <style scoped>
 .home {
   text-align: center;
+  padding: 20px;
+}
+
+.el-row {
+  margin-top: 30px;
+}
+
+.el-col {
+  margin-bottom: 20px;
+}
+
+h2 {
+  color: #409EFF;
+  margin-bottom: 10px;
+}
+
+p {
+  color: #666;
+  margin-bottom: 30px;
 }
 </style>
