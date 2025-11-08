@@ -43,14 +43,29 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const handleLogout = async () => {
-  await authStore.logout()
-  ElMessage.success('已退出登录')
-  router.push('/login')
+  try {
+    await authStore.logout()
+    ElMessage.success('已退出登录')
+    router.push('/login')
+  } catch (error) {
+    console.error('登出失败:', error)
+    ElMessage.error('登出失败')
+  }
 }
 
 onMounted(async () => {
   if (authStore.isAuthenticated && !authStore.user) {
-    await authStore.getUserProfile()
+    // 添加错误处理
+    try {
+      await authStore.getUserProfile()
+    } catch (error) {
+      console.error('获取用户信息失败:', error)
+      // 如果获取用户信息失败，可能是token过期，清除登录状态
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        await authStore.logout()
+        router.push('/login')
+      }
+    }
   }
 })
 </script>

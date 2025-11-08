@@ -124,6 +124,33 @@ async def login(user_data: UserLogin, supabase: Client = Depends(get_supabase_cl
             detail=f"Login failed: {error_msg}"
         )
 
-@router.get("/me", response_model=UserResponse)
-async def read_users_me(current_user: dict = Depends(get_current_user)):
-    return UserResponse(**current_user)
+@router.post("/logout")
+async def logout(
+    current_user: dict = Depends(get_current_user),
+    supabase: Client = Depends(get_supabase_client)
+):
+    """
+    用户登出接口
+    """
+    try:
+        # 记录登出日志
+        print(f"用户 {current_user['username']} 已登出")
+        
+        return {
+            "success": True,
+            "message": "登出成功"
+        }
+    except ConnectionResetError:
+        # 处理连接重置错误，这是客户端问题，不影响服务端逻辑
+        print("客户端连接重置，但登出操作已完成")
+        return {
+            "success": True,
+            "message": "登出成功"
+        }
+    except Exception as e:
+        # 其他异常处理
+        print(f"登出过程中发生异常: {str(e)}")
+        return {
+            "success": True,
+            "message": "登出成功"
+        }

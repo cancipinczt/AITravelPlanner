@@ -1,6 +1,6 @@
 <template>
   <div class="profile-container">
-    <el-card class="profile-card">
+    <el-card class="profile-card" v-loading="loading">
       <h2>个人中心</h2>
       <el-form>
         <el-form-item label="用户名">
@@ -21,29 +21,43 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores'
-import dayjs from 'dayjs'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const loading = ref(false)
 
 const formatDate = (dateString: string | undefined) => {
   if (!dateString) return ''
-  return dayjs(dateString).format('YYYY-MM-DD HH:mm:ss')
+  return new Date(dateString).toLocaleString('zh-CN')
 }
 
 const handleLogout = async () => {
-  await authStore.logout()
-  ElMessage.success('已退出登录')
-  router.push('/login')
+  try {
+    await authStore.logout()
+    ElMessage.success('已退出登录')
+    // 添加页面跳转逻辑
+    router.push('/login')
+  } catch (error) {
+    console.error('登出失败:', error)
+    ElMessage.error('登出失败')
+  }
 }
 
 onMounted(async () => {
-  if (authStore.isAuthenticated && !authStore.user) {
-    await authStore.getUserProfile()
+  loading.value = true
+  try {
+    const result = await authStore.getUserProfile()
+    if (!result.success) {
+      ElMessage.error(result.message || '获取用户信息失败')
+    }
+  } catch (error) {
+    ElMessage.error('获取用户信息失败')
+  } finally {
+    loading.value = false
   }
 })
 </script>
