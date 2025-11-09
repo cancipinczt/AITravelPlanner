@@ -31,6 +31,13 @@ const routes = [
     name: 'Register',
     component: () => import('../views/RegisterView.vue'),
     meta: { requiresGuest: true }
+  },
+  // 添加语音识别测试页面路由
+  {
+    path: '/speech-test',
+    name: 'SpeechTest',
+    component: () => import('../views/SpeechTestView.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 

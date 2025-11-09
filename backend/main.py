@@ -68,4 +68,5 @@ async def test_supabase():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # 使用导入字符串而不是应用对象来启用热重载
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

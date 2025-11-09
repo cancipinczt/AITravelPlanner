@@ -37,6 +37,19 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- 添加语音识别测试入口 -->
+    <el-row :gutter="20" style="margin-top: 30px;">
+      <el-col :span="24">
+        <el-card>
+          <h3>语音识别功能测试</h3>
+          <p>测试科大讯飞语音识别API的两个接口功能</p>
+          <el-button type="primary" @click="$router.push('/speech-test')">
+            前往语音识别测试
+          </el-button>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
