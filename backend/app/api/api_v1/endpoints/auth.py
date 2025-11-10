@@ -78,7 +78,7 @@ async def login(user_data: UserLogin, supabase: Client = Depends(get_supabase_cl
         if not result.data:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password"
+                detail="用户名不存在"
             )
         
         db_user = result.data[0]
@@ -88,7 +88,7 @@ async def login(user_data: UserLogin, supabase: Client = Depends(get_supabase_cl
         if not verify_password(user_data.password, db_user["password_hash"]):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password"
+                detail="密码错误"
             )
         pwd_time = time.time() - pwd_start
         
@@ -115,13 +115,16 @@ async def login(user_data: UserLogin, supabase: Client = Depends(get_supabase_cl
             "token_type": "bearer",
             "user": user_response
         }
+    except HTTPException:
+        # 重新抛出HTTP异常，保持原有错误信息
+        raise
     except Exception as e:
         total_time = time.time() - start_time
         print(f"登录失败，耗时: {total_time:.3f}s")
         error_msg = str(e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Login failed: {error_msg}"
+            detail=f"登录失败: {error_msg}"
         )
 
 @router.post("/logout")

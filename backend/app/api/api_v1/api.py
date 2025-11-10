@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.api_v1.endpoints import health, travel, auth, user, trips, ai, speech
+from app.api.api_v1.endpoints import health, travel, auth, user, trips, ai, speech, maps
 
 api_router = APIRouter()
 
@@ -23,3 +23,6 @@ api_router.include_router(ai.router, prefix="/ai", tags=["ai"])
 
 # 包含语音识别API路由（按照需求文档4.1.5规范）
 api_router.include_router(speech.router, prefix="/speech", tags=["speech"])
+
+# 包含地图API路由（新增）
+api_router.include_router(maps.router, prefix="/maps", tags=["maps"])

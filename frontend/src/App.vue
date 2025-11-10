@@ -17,6 +17,7 @@
                 </span>
                 <template #dropdown>
                   <el-dropdown-menu>
+                    <!-- 顶部栏个人中心按钮指向/profile -->
                     <el-dropdown-item @click="$router.push('/profile')">个人中心</el-dropdown-item>
                     <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
                   </el-dropdown-menu>
@@ -54,19 +55,8 @@ const handleLogout = async () => {
 }
 
 onMounted(async () => {
-  if (authStore.isAuthenticated && !authStore.user) {
-    // 添加错误处理
-    try {
-      await authStore.getUserProfile()
-    } catch (error) {
-      console.error('获取用户信息失败:', error)
-      // 如果获取用户信息失败，可能是token过期，清除登录状态
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        await authStore.logout()
-        router.push('/login')
-      }
-    }
-  }
+  // 应用启动时初始化认证状态
+  await authStore.initializeAuth()
 })
 </script>
 

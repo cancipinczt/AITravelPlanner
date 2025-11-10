@@ -19,3 +19,16 @@ app.use(router)
 app.use(ElementPlus)
 
 app.mount('#app')
+
+// 添加全局错误处理
+app.config.errorHandler = (err, instance, info) => {
+  console.error('Vue应用错误:', err)
+  console.error('组件实例:', instance)
+  console.error('错误信息:', info)
+}
+
+// 添加未捕获的Promise错误处理
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('未处理的Promise错误:', event.reason)
+  event.preventDefault()
+})

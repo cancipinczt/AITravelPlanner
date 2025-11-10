@@ -42,11 +42,20 @@ api.interceptors.response.use(
   (response) => {
     return response
   },
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
+      const authStore = useAuthStore()
+      
       // 清除本地存储的token
       localStorage.removeItem('token')
-      // 可以在这里添加重定向到登录页的逻辑
+      authStore.token = null
+      authStore.isAuthenticated = false
+      authStore.user = null
+      
+      // 重定向到登录页
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }
@@ -59,7 +68,31 @@ export const useAuthStore = defineStore('auth', {
     isAuthenticated: !!localStorage.getItem('token')
   }),
   actions: {
-    // 修改登录方法
+    // 添加token检查方法
+    checkTokenValidity() {
+      if (!this.token) {
+        this.isAuthenticated = false
+        return false
+      }
+      
+      // 检查token是否过期（简单检查）
+      try {
+        const payload = JSON.parse(atob(this.token.split('.')[1]))
+        const exp = payload.exp * 1000 // 转换为毫秒
+        if (Date.now() >= exp) {
+          // Token已过期
+          this.logout()
+          return false
+        }
+        return true
+      } catch (error) {
+        console.error('Token检查失败:', error)
+        this.logout()
+        return false
+      }
+    },
+    
+    // 修改登录方法，添加token存储时间
     async login(username: string, password: string) {
       try {
         const response = await api.post('/auth/login', {
@@ -73,16 +106,36 @@ export const useAuthStore = defineStore('auth', {
         this.isAuthenticated = true
         
         localStorage.setItem('token', access_token)
+        localStorage.setItem('token_timestamp', Date.now().toString())
+        
         return { success: true }
       } catch (error: any) {
+        // 优先使用后端返回的具体错误信息
+        if (error.response?.data?.detail) {
+          return { 
+            success: false, 
+            message: error.response.data.detail 
+          }
+        }
+        
+        // 网络错误和其他异常
+        let errorMessage = '登录失败'
+        if (error.code === 'NETWORK_ERROR') {
+          errorMessage = '网络连接失败，请检查网络连接'
+        } else if (error.code === 'ECONNABORTED') {
+          errorMessage = '请求超时，请稍后重试'
+        } else if (error.response?.status === 500) {
+          errorMessage = '服务器内部错误，请稍后重试'
+        }
+        
         return { 
           success: false, 
-          message: error.response?.data?.detail || '登录失败' 
+          message: errorMessage 
         }
       }
     },
     
-    // 修改注册方法
+    // 修改注册方法，优化错误信息处理
     async register(username: string, password: string) {
       try {
         const response = await api.post('/auth/register', {
@@ -98,9 +151,38 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('token', access_token)
         return { success: true }
       } catch (error: any) {
+        let errorMessage = '注册失败'
+        
+        if (error.response?.data?.detail) {
+          const detail = error.response.data.detail
+          
+          // 将后端英文错误信息转换为中文
+          if (detail.includes('Username already taken')) {
+            errorMessage = '用户名已被使用，请选择其他用户名'
+          } else if (detail.includes('Failed to create user')) {
+            errorMessage = '创建用户失败，请稍后重试'
+          } else if (detail.includes('username')) {
+            errorMessage = '用户名格式不正确（长度3-20个字符）'
+          } else if (detail.includes('password')) {
+            errorMessage = '密码格式不正确（至少6个字符）'
+          } else if (detail.includes('Registration failed')) {
+            errorMessage = '注册失败，请检查输入信息'
+          } else {
+            errorMessage = detail
+          }
+        } else if (error.code === 'NETWORK_ERROR') {
+          errorMessage = '网络连接失败，请检查网络连接'
+        } else if (error.code === 'ECONNABORTED') {
+          errorMessage = '请求超时，请稍后重试'
+        } else if (error.response?.status === 400) {
+          errorMessage = '请求参数错误，请检查输入信息'
+        } else if (error.response?.status === 500) {
+          errorMessage = '服务器内部错误，请稍后重试'
+        }
+        
         return { 
           success: false, 
-          message: error.response?.data?.detail || '注册失败' 
+          message: errorMessage 
         }
       }
     },
@@ -126,42 +208,30 @@ export const useAuthStore = defineStore('auth', {
         this.token = null
         this.isAuthenticated = false
         localStorage.removeItem('token')
+        localStorage.removeItem('token_timestamp')
       }
     },
     
-    // 修改getUserProfile方法，确保在获取用户信息前token已设置
-    async getUserProfile() {
-      try {
-        // 确保token已添加到请求头
-        const token = localStorage.getItem('token')
-        if (token && !this.token) {
-          this.token = token
-        }
-        
-        const response = await api.get('/user/profile')
-        this.user = response.data
-        return { success: true }
-      } catch (error: any) {
-        // 如果认证失败，清除本地状态
-        if (error.response?.status === 401 || error.response?.status === 403) {
+    // 添加初始化检查方法
+    async initializeAuth() {
+      if (!this.token) {
+        this.isAuthenticated = false
+        return
+      }
+      
+      // 检查token有效性
+      if (!this.checkTokenValidity()) {
+        return
+      }
+      
+      // 如果token有效但用户信息为空，获取用户信息
+      if (this.isAuthenticated && !this.user) {
+        try {
+          await this.getUserProfile()
+        } catch (error) {
+          console.error('初始化用户信息失败:', error)
+          // 如果获取用户信息失败，可能是token无效，执行登出
           this.logout()
-        }
-        return { 
-          success: false, 
-          message: error.response?.data?.detail || '获取用户信息失败' 
-        }
-      }
-    },
-    
-    async updateUserProfile(userData: Partial<User>) {
-      try {
-        const response = await api.put('/user/profile', userData)
-        this.user = response.data
-        return { success: true }
-      } catch (error: any) {
-        return { 
-          success: false, 
-          message: error.response?.data?.detail || '更新用户信息失败' 
         }
       }
     }

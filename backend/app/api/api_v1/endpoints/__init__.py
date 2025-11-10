@@ -5,6 +5,7 @@ from .user import router as user_router
 from .trips import router as trips_router
 from .ai import router as ai_router
 from .speech import router as speech_router
+from .maps import router as maps_router
 
 __all__ = [
     "health_router",
@@ -13,5 +14,6 @@ __all__ = [
     "user_router",
     "trips_router",
     "ai_router",
-    "speech_router"
+    "speech_router",
+    "maps_router"
 ]
