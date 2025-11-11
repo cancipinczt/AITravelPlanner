@@ -97,17 +97,18 @@
           </el-table-column>
           
           <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
-          <el-table-column prop="expense_date" label="消费日期" width="120" >
+          <el-table-column prop="expense_date" label="消费日期" width="120">
             <template #default="scope">
               <span>{{ formatDate(scope.row.expense_date) }}</span>
             </template>
           </el-table-column>
           
-          <el-table-column prop="created_at" label="创建时间" width="160">
+          <!-- 移除创建时间列 -->
+          <!-- <el-table-column prop="created_at" label="创建时间" width="160">
             <template #default="scope">
               <span>{{ formatDateTime(scope.row.created_at) }}</span>
             </template>
-          </el-table-column>
+          </el-table-column> -->
           
           <el-table-column label="操作" width="150" align="center">
             <template #default="scope">
