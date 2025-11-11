@@ -273,3 +273,157 @@ export const useAppStore = defineStore('app', {
     // 存储操作
   }
 })
+
+// 用户偏好接口
+interface UserPreference {
+  id: string
+  user_id: string
+  travel_preferences: string | null
+  special_requirements: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export const useUserPreferenceStore = defineStore('userPreference', {
+  state: () => ({
+    preferences: [] as UserPreference[],
+    loading: false,
+    error: null as string | null
+  }),
+
+  getters: {
+    getUserPreferences: (state) => state.preferences,
+    getPreferenceById: (state) => (id: string) => {
+      return state.preferences.find(pref => pref.id === id)
+    },
+    hasPreferences: (state) => state.preferences.length > 0,
+    preferencesCount: (state) => state.preferences.length
+  },
+
+  actions: {
+    // 获取用户所有偏好 - 重命名为fetchUserPreferences以避免命名冲突
+    async fetchUserPreferences() {
+      this.loading = true
+      this.error = null
+      try {
+        console.log('开始调用后端API获取偏好数据...')
+        const response = await api.get('/user/preferences')
+        console.log('后端API响应状态:', response.status)
+        console.log('后端返回的完整响应:', response)
+        console.log('后端返回的数据:', response.data)
+        
+        // 修复：后端返回的是UserPreferenceListResponse对象，包含preferences字段
+        if (response.data && response.data.preferences) {
+          this.preferences = response.data.preferences
+          console.log('✅ 成功加载偏好数据，数量:', this.preferences.length)
+          console.log('偏好数据详情:', this.preferences)
+        } else {
+          this.preferences = []
+          console.warn('⚠️ 后端返回的偏好数据格式不正确，期望包含preferences字段:', response.data)
+        }
+      } catch (error: any) {
+        this.error = error.response?.data?.detail || '获取偏好失败'
+        console.error('❌ 获取用户偏好失败:', error)
+        
+        // 添加详细的错误信息
+        if (error.response) {
+          console.error('HTTP状态码:', error.response.status)
+          console.error('响应数据:', error.response.data)
+          console.error('响应头:', error.response.headers)
+        } else if (error.request) {
+          console.error('请求未收到响应，可能是网络问题或后端服务未启动')
+          console.error('请求详情:', error.request)
+        } else {
+          console.error('请求配置错误:', error.message)
+        }
+        
+        this.preferences = []
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // 创建新偏好 - 修复参数传递
+    async createUserPreferences(preferenceData: { 
+      name: string; 
+      travel_preferences?: string; 
+      special_requirements?: string 
+    }) {
+      this.loading = true
+      this.error = null
+      try {
+        const response = await api.post('/user/preferences', preferenceData)
+        if (response.data) {
+          // 将新偏好添加到列表中
+          this.preferences.unshift(response.data)
+          return { success: true, data: response.data }
+        }
+        return { success: false, message: '创建偏好失败' }
+      } catch (error: any) {
+        this.error = error.response?.data?.detail || '创建偏好失败'
+        console.error('创建用户偏好失败:', error)
+        return { success: false, message: this.error }
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // 更新特定偏好 - 修复参数传递
+    async updateUserPreferences(preferenceId: string, preferenceData: { 
+      name?: string; 
+      travel_preferences?: string; 
+      special_requirements?: string 
+    }) {
+      this.loading = true
+      this.error = null
+      try {
+        const response = await api.put(`/user/preferences/${preferenceId}`, preferenceData)
+        if (response.data) {
+          // 更新列表中的偏好
+          const index = this.preferences.findIndex(pref => pref.id === preferenceId)
+          if (index !== -1) {
+            this.preferences[index] = response.data
+          }
+          return { success: true, data: response.data }
+        }
+        return { success: false, message: '更新偏好失败' }
+      } catch (error: any) {
+        this.error = error.response?.data?.detail || '更新偏好失败'
+        console.error('更新用户偏好失败:', error)
+        return { success: false, message: this.error }
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // 删除特定偏好 - 修复参数传递
+    async deleteUserPreferences(preferenceId: string) {
+      this.loading = true
+      this.error = null
+      try {
+        const response = await api.delete(`/user/preferences/${preferenceId}`)
+        if (response.data) {
+          // 从列表中移除偏好
+          this.preferences = this.preferences.filter(pref => pref.id !== preferenceId)
+          return { success: true, message: '删除偏好成功' }
+        }
+        return { success: false, message: '删除偏好失败' }
+      } catch (error: any) {
+        this.error = error.response?.data?.detail || '删除偏好失败'
+        console.error('删除用户偏好失败:', error)
+        return { success: false, message: this.error }
+      } finally {
+        this.loading = false
+      }
+    },
+
+    clearPreferences() {
+      this.preferences = []
+      this.error = null
+      this.loading = false
+    }
+  }
+})
+
+// 删除重复的导出语句
+// export { useAuthStore, useAppStore, useUserPreferenceStore }

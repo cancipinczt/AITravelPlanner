@@ -26,22 +26,75 @@
             <el-input-number v-model="planForm.travelers" :min="1" :max="10" />
           </el-form-item>
           
+          <!-- 偏好选择区域 -->
           <el-form-item label="旅行偏好">
-            <el-input 
-              v-model="planForm.preferences" 
-              type="textarea" 
-              :rows="3"
-              placeholder="例如：喜欢美食、购物、历史文化、自然风光等" 
-            />
-          </el-form-item>
-          
-          <el-form-item label="特殊需求">
-            <el-input 
-              v-model="planForm.specialRequirements" 
-              type="textarea" 
-              :rows="2"
-              placeholder="例如：带孩子、有老人、需要无障碍设施等" 
-            />
+            <!-- 加载状态 -->
+            <div v-if="preferenceStore.loading" class="preference-loading">
+              <el-skeleton :rows="2" animated />
+            </div>
+            
+            <!-- 错误状态 -->
+            <div v-else-if="preferenceStore.error" class="preference-error">
+              <el-alert
+                :title="`加载偏好失败: ${preferenceStore.error}`"
+                type="error"
+                show-icon
+                :closable="false"
+                size="small"
+              />
+              <el-button type="primary" size="small" @click="loadUserPreferences" style="margin-top: 10px;">
+                重试加载
+              </el-button>
+            </div>
+            
+            <!-- 偏好选择 -->
+            <div v-else class="preference-selection">
+              <el-select 
+                v-model="selectedPreferenceId" 
+                placeholder="请选择旅行偏好"
+                style="width: 300px; margin-right: 10px;"
+                @change="handlePreferenceChange"
+              >
+                <el-option 
+                  v-for="preference in userPreferences" 
+                  :key="preference.id"
+                  :label="preference.name" 
+                  :value="preference.id"
+                />
+              </el-select>
+              
+              <el-button 
+                type="primary" 
+                link 
+                @click="showPreferenceDialog = true"
+              >
+                管理偏好
+              </el-button>
+              <el-button 
+                type="success" 
+                link 
+                @click="showCreateDialog = true"
+              >
+                创建新偏好
+              </el-button>
+            </div>
+            
+            <!-- 显示选中偏好的详细信息 -->
+            <div v-if="selectedPreference" class="preference-details">
+              <div class="preference-info">
+                <h4>{{ selectedPreference.name }}</h4>
+                <div class="preference-content">
+                  <div v-if="selectedPreference.travel_preferences" class="preference-item">
+                    <strong>旅行偏好：</strong>
+                    <span>{{ selectedPreference.travel_preferences }}</span>
+                  </div>
+                  <div v-if="selectedPreference.special_requirements" class="preference-item">
+                    <strong>特殊需求：</strong>
+                    <span>{{ selectedPreference.special_requirements }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </el-form-item>
           
           <el-form-item>
@@ -142,26 +195,56 @@
         </div>
       </div>
     </el-card>
+
+    <!-- 偏好管理对话框 -->
+    <el-dialog 
+      v-model="showPreferenceDialog" 
+      title="管理旅行偏好" 
+      width="600px"
+      :before-close="handleDialogClose"
+    >
+      <UserPreferenceManager 
+        @preference-updated="handlePreferenceUpdated"
+        @preference-created="handlePreferenceCreated"
+        @preference-deleted="handlePreferenceDeleted"
+      />
+    </el-dialog>
+
+    <!-- 创建偏好对话框 -->
+    <el-dialog 
+      v-model="showCreateDialog" 
+      title="创建旅行偏好" 
+      width="500px"
+      :before-close="handleDialogClose"
+    >
+      <UserPreferenceCreator 
+        @preference-created="handlePreferenceCreated"
+      />
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { useAuthStore } from '@/stores'
+import { useUserPreferenceStore } from '@/stores'
 import { ElMessage } from 'element-plus'
 import MarkdownIt from 'markdown-it'
+import UserPreferenceManager from '@/components/UserPreferenceManager.vue'
+import UserPreferenceCreator from '@/components/UserPreferenceCreator.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const preferenceStore = useUserPreferenceStore()
 
 // 初始化Markdown解析器
 const md = new MarkdownIt({
-  html: true,        // 允许HTML标签
-  linkify: true,     // 自动转换URL为链接
-  typographer: true, // 启用一些语言替换和引号美化
-  breaks: true       // 将换行符转换为<br>
+  html: true,
+  linkify: true,
+  typographer: true,
+  breaks: true
 })
 
 // 表单数据
@@ -177,6 +260,73 @@ const planForm = reactive({
 // 状态管理
 const generating = ref(false)
 const planResult = ref<any>(null)
+const showPreferenceDialog = ref(false)
+const showCreateDialog = ref(false)
+const selectedPreferenceId = ref('')
+
+// 计算属性
+const userPreferences = computed(() => {
+  return preferenceStore.preferences
+})
+
+const selectedPreference = computed(() => {
+  if (!selectedPreferenceId.value) return null
+  return preferenceStore.getPreferenceById(selectedPreferenceId.value)
+})
+
+// 生命周期
+onMounted(async () => {
+  await loadUserPreferences()
+})
+
+// 方法
+const loadUserPreferences = async () => {
+  try {
+    await preferenceStore.fetchUserPreferences()
+    console.log('偏好数据加载成功:', preferenceStore.preferences)
+  } catch (error) {
+    console.error('偏好数据加载失败:', error)
+    ElMessage.error('加载偏好数据失败，请检查网络连接')
+  }
+}
+
+const handlePreferenceChange = (preferenceId: string) => {
+  const preference = preferenceStore.getPreferenceById(preferenceId)
+  if (preference) {
+    // 自动填充偏好信息到表单
+    planForm.preferences = preference.travel_preferences || ''
+    planForm.specialRequirements = preference.special_requirements || ''
+  }
+}
+
+const handlePreferenceUpdated = async (updatedPreference: any) => {
+  await loadUserPreferences()
+  // 如果更新的是当前选中的偏好，更新表单
+  if (selectedPreferenceId.value === updatedPreference.id) {
+    handlePreferenceChange(updatedPreference.id)
+  }
+}
+
+const handlePreferenceCreated = async (newPreference: any) => {
+  await loadUserPreferences()
+  // 自动选择新创建的偏好
+  selectedPreferenceId.value = newPreference.id
+  handlePreferenceChange(newPreference.id)
+}
+
+const handlePreferenceDeleted = async (preferenceId: string) => {
+  await loadUserPreferences()
+  // 如果删除的是当前选中的偏好，清空选择
+  if (selectedPreferenceId.value === preferenceId) {
+    selectedPreferenceId.value = ''
+    planForm.preferences = ''
+    planForm.specialRequirements = ''
+  }
+}
+
+const handleDialogClose = (done: () => void) => {
+  done()
+}
 
 // 生成旅行计划
 const generatePlan = async () => {
@@ -189,7 +339,17 @@ const generatePlan = async () => {
   planResult.value = null
 
   try {
-    const response = await axios.post('http://localhost:8000/api/v1/ai/plan', planForm)
+    // 构建请求数据，包含偏好信息
+    const requestData = {
+      destination: planForm.destination,
+      duration: planForm.duration,
+      budget: planForm.budget,
+      travelers: planForm.travelers,
+      preferences: planForm.preferences,
+      specialRequirements: planForm.specialRequirements
+    }
+
+    const response = await axios.post('http://localhost:8000/api/v1/ai/plan', requestData)
     planResult.value = response.data
     ElMessage.success('旅行计划生成成功！')
   } catch (error: any) {
@@ -268,6 +428,52 @@ const getTagType = (type: string) => {
   margin-bottom: 20px;
   border-left: 4px solid #409EFF;
   padding-left: 10px;
+}
+
+.preference-selection {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.preference-details {
+  margin-top: 15px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #409EFF;
+}
+
+.preference-info h4 {
+  margin: 0 0 10px 0;
+  color: #409EFF;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.preference-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.preference-item {
+  display: flex;
+  align-items: flex-start;
+}
+
+.preference-item strong {
+  min-width: 80px;
+  color: #606266;
+  font-weight: bold;
+}
+
+.preference-item span {
+  flex: 1;
+  color: #333;
+  line-height: 1.5;
 }
 
 .result-section {
@@ -387,3 +593,50 @@ const getTagType = (type: string) => {
   margin-top: 20px;
 }
 </style>
+
+/* 偏好加载状态样式 */
+.preference-loading {
+  padding: 10px;
+}
+
+/* 偏好错误状态样式 */
+.preference-error {
+  padding: 10px;
+  text-align: center;
+}
+
+/* 偏好详情样式 */
+.preference-details {
+  margin-top: 15px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #409EFF;
+}
+
+.preference-info h4 {
+  margin: 0 0 10px 0;
+  color: #303133;
+}
+
+.preference-content {
+  display: grid;
+  gap: 8px;
+}
+
+.preference-item {
+  display: flex;
+  align-items: flex-start;
+}
+
+.preference-item strong {
+  font-weight: bold;
+  color: #606266;
+  min-width: 80px;
+  margin-right: 10px;
+}
+
+.preference-item span {
+  color: #333;
+  flex: 1;
+}

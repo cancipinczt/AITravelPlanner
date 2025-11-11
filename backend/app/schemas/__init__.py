@@ -6,6 +6,7 @@ from .ai import AIPlanRequest, AIPlanResponse, AIRecommendationRequest, AIRecomm
 __all__ = [
     # 从auth.py导出
     "UserCreate", "UserLogin", "UserResponse", "Token", "TokenData",
+    "UserPreferenceCreate", "UserPreferenceUpdate", "UserPreferenceResponse",
     
     # 从speech.py导出
     "SpeechRequest", "SpeechResponse", "VoiceRecordCreate", "VoiceRecordResponse",
