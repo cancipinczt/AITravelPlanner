@@ -212,7 +212,24 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     
-    // 添加初始化检查方法
+    // 添加获取用户信息的方法
+    async getUserProfile() {
+      if (!this.token) {
+        throw new Error('No token available')
+      }
+      
+      try {
+        const response = await api.get('/auth/me')
+        // 后端返回的是UserResponse对象，直接赋值给user
+        this.user = response.data
+        return this.user
+      } catch (error) {
+        console.error('获取用户信息失败:', error)
+        throw error
+      }
+    },
+    
+    // 修改初始化检查方法，优化错误处理
     async initializeAuth() {
       if (!this.token) {
         this.isAuthenticated = false
@@ -230,8 +247,18 @@ export const useAuthStore = defineStore('auth', {
           await this.getUserProfile()
         } catch (error) {
           console.error('初始化用户信息失败:', error)
-          // 如果获取用户信息失败，可能是token无效，执行登出
-          this.logout()
+          // 如果获取用户信息失败，不立即登出，而是检查错误类型
+          // 如果是网络错误或服务器暂时不可用，保持登录状态
+          if (error.code === 'NETWORK_ERROR' || error.code === 'ECONNABORTED' || 
+              error.response?.status >= 500) {
+            console.warn('服务器暂时不可用，保持登录状态')
+            // 保持当前状态，不执行登出
+            return
+          }
+          // 只有明确是认证错误时才执行登出
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            this.logout()
+          }
         }
       }
     }

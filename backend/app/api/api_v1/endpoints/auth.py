@@ -157,3 +157,41 @@ async def logout(
             "success": True,
             "message": "登出成功"
         }
+
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_info(
+    current_user: dict = Depends(get_current_user),
+    supabase: Client = Depends(get_supabase_client)
+):
+    """
+    获取当前登录用户信息接口
+    """
+    try:
+        # 从数据库中获取最新的用户信息
+        result = supabase.table("users").select("*").eq("username", current_user["username"]).execute()
+        if not result.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="用户不存在"
+            )
+        
+        user_data = result.data[0]
+        
+        # 构建UserResponse
+        user_response = UserResponse(
+            id=user_data["id"],
+            username=user_data["username"],
+            created_at=user_data.get("created_at"),
+            is_active=user_data.get("is_active", True)
+        )
+        
+        return user_response
+    except HTTPException:
+        # 重新抛出HTTP异常
+        raise
+    except Exception as e:
+        error_msg = str(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取用户信息失败: {error_msg}"
+        )
