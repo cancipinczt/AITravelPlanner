@@ -8,6 +8,7 @@ import TravelPlansView from '../views/TravelPlansView.vue'
 import UserProfileView from '../views/UserProfileView.vue'
 import MapDemoView from '../views/MapDemoView.vue'
 import MapApiTestView from '../views/MapApiTestView.vue'
+import AIPlanningView from '../views/AIPlanningView.vue'
 
 const routes = [
   {
@@ -56,6 +57,12 @@ const routes = [
     path: '/map-api-test',
     name: 'map-api-test',
     component: MapApiTestView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/ai-planning',
+    name: 'ai-planning',
+    component: AIPlanningView,
     meta: { requiresAuth: true }
   }
 ]

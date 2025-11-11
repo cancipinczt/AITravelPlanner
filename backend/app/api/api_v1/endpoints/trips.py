@@ -7,9 +7,10 @@ from app.schemas.trip import (
     TripCreate, TripResponse, TripUpdate, 
     ItineraryCreate, ItineraryResponse,
     ExpenseCreate, ExpenseResponse,
-    AIPlanRequest, AIPlanResponse,
     POIRecommendationResponse
 )
+# 更新导入：使用新的AI模型定义
+from app.schemas.ai import AIPlanRequest, AIPlanResponse
 
 router = APIRouter()
 
@@ -135,7 +136,7 @@ async def generate_itinerary(
     supabase = Depends(get_supabase_client),
     current_user = Depends(get_current_user)
 ):
-    """AI生成行程 - 占位实现，后续集成AI服务"""
+    """AI生成行程 - 基于现有旅行计划生成AI行程"""
     # 验证旅行计划存在且属于当前用户
     response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user.id)).execute()
     
@@ -148,10 +149,11 @@ async def generate_itinerary(
     # TODO: 集成阿里云百炼AI服务
     # 这里先返回模拟数据
     return AIPlanResponse(
-        itinerary=[],
-        total_cost_estimate=0,
+        itinerary="基于现有旅行计划的AI生成行程（待实现）",
+        budget_usage={},
         recommendations=[],
-        weather_info=None
+        weather_info={},
+        status="success"
     )
 
 @router.get("/trips/{trip_id}/itinerary", response_model=List[ItineraryResponse])

@@ -86,6 +86,15 @@
         show-icon>
       </el-alert>
     </div>
+    <el-row :gutter="20">
+      <el-col :xs="24" :sm="12" :md="8" :lg="6">
+        <el-card class="feature-card" @click="navigateTo('/ai-planning')">
+          <div class="feature-icon">🤖</div>
+          <h3>智能行程规划</h3>
+          <p>AI为您生成个性化旅行路线</p>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
@@ -120,6 +129,12 @@ const testBackendConnection = async () => {
     testResult.value = `后端连接失败: ${error}`
   }
 }
+
+// 在methods中添加导航方法
+const navigateTo = (path: string) => {
+  router.push(path)
+}
+
 </script>
 
 <style scoped>

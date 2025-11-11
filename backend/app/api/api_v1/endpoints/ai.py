@@ -1,55 +1,84 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from app.core.auth import get_current_user
-from app.schemas.trip import AIPlanRequest, AIPlanResponse
+from fastapi import APIRouter, HTTPException, Depends
+from typing import Dict, Any
+import logging
+from app.core.ai_client import ai_client
+from app.schemas.ai import AIPlanRequest, AIPlanResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# AI规划API - 按照需求文档4.1.6规范
+# 修复路由路径：移除重复的/ai前缀
+@router.post("/plan", response_model=AIPlanResponse)
+async def generate_travel_plan(request: AIPlanRequest) -> AIPlanResponse:
+    """
+    生成AI旅行计划 - 使用真实的阿里云百炼API
+    """
+    try:
+        # 构建用户输入
+        user_input = f"""
+目的地：{request.destination}
+旅行天数：{request.duration}天
+预算：{request.budget}元
+同行人数：{request.travelers}人
+旅行偏好：{request.preferences}
+特殊需求：{request.special_requirements or '无'}
+        """.strip()
+        
+        # 调用AI客户端生成旅行计划
+        plan_result = await ai_client.generate_travel_plan(user_input)
+        
+        return AIPlanResponse(
+            itinerary=plan_result["itinerary"],
+            budget_usage=plan_result["budget_usage"],
+            recommendations=plan_result["recommendations"],
+            weather_info=plan_result["weather_info"],
+            status=plan_result["status"],
+            error=plan_result.get("error")
+        )
+        
+    except Exception as e:
+        logger.error(f"生成旅行计划失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"生成旅行计划失败: {str(e)}")
 
-@router.post("/ai/plan", response_model=AIPlanResponse)
-async def ai_travel_plan(
-    plan_request: AIPlanRequest,
-    current_user = Depends(get_current_user)
-):
-    """AI旅行规划"""
-    # TODO: 集成阿里云百炼AI服务
-    # 这里先返回模拟数据用于测试
-    
-    return AIPlanResponse(
-        itinerary=[],
-        total_cost_estimate=plan_request.budget * 0.8,  # 模拟80%预算使用
-        recommendations=[
-            {
-                "type": "attraction",
-                "name": "示例景点",
-                "reason": "基于您的偏好推荐"
-            }
-        ],
-        weather_info={
-            "temperature": "25°C",
-            "condition": "晴朗"
+@router.get("/recommendations")
+async def get_recommendations(destination: str, preferences: str = "") -> Dict[str, Any]:
+    """
+    获取景点推荐
+    """
+    try:
+        pref_list = [p.strip() for p in preferences.split(",")] if preferences else []
+        recommendations = await ai_client.get_poi_recommendations(destination, pref_list)
+        
+        return {
+            "destination": destination,
+            "recommendations": recommendations,
+            "count": len(recommendations)
         }
-    )
+        
+    except Exception as e:
+        logger.error(f"获取推荐失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取推荐失败: {str(e)}")
 
-@router.post("/ai/recommendations")
-async def ai_recommendations():
-    """景点/餐厅推荐"""
-    # TODO: 实现AI推荐逻辑
-    return {"message": "AI推荐功能待实现"}
+@router.post("/optimize")
+async def optimize_plan(plan_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    优化旅行计划（待实现）
+    """
+    return {
+        "message": "优化功能待实现",
+        "optimized_plan": plan_data
+    }
 
-@router.post("/ai/optimize")
-async def ai_optimize():
-    """行程优化建议"""
-    # TODO: 实现行程优化逻辑
-    return {"message": "行程优化功能待实现"}
-
-@router.get("/ai/weather/{location}")
-async def get_weather(location: str):
-    """天气信息获取"""
-    # TODO: 集成天气API
+@router.get("/weather/{location}")
+async def get_weather(location: str) -> Dict[str, Any]:
+    """
+    获取天气信息（模拟实现）
+    """
     return {
         "location": location,
         "temperature": "25°C",
-        "condition": "晴朗",
+        "weather": "晴朗",
+        "humidity": "60%",
         "forecast": "未来几天天气良好"
     }
