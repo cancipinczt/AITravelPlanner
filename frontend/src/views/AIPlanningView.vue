@@ -10,21 +10,18 @@
       <div class="input-section">
         <h3>输入旅行需求</h3>
         <el-form :model="planForm" label-width="100px">
-          <el-form-item label="目的地">
-            <el-input v-model="planForm.destination" placeholder="例如：日本东京" />
+          <el-form-item label="旅行需求" required>
+            <el-input 
+              v-model="planForm.travelRequirements" 
+              type="textarea"
+              :rows="3"
+              placeholder="请输入旅行的目的地、天数、预算、同行人数，例如：日本东京，7天，预算15000元，2人同行"
+              :autosize="{ minRows: 3, maxRows: 6 }"
+            />
           </el-form-item>
           
-          <el-form-item label="旅行天数">
-            <el-input-number v-model="planForm.duration" :min="1" :max="30" />
-          </el-form-item>
-          
-          <el-form-item label="预算(元)">
-            <el-input-number v-model="planForm.budget" :min="1000" :step="1000" />
-          </el-form-item>
-          
-          <el-form-item label="同行人数">
-            <el-input-number v-model="planForm.travelers" :min="1" :max="10" />
-          </el-form-item>
+          <!-- 添加间距分隔符 -->
+          <div class="section-divider"></div>
           
           <!-- 偏好选择区域 -->
           <el-form-item label="旅行偏好">
@@ -95,7 +92,7 @@
               type="primary" 
               :loading="generating" 
               @click="generatePlan"
-              :disabled="!planForm.destination"
+              :disabled="!planForm.travelRequirements"
             >
               {{ generating ? 'AI规划中...' : '生成智能行程' }}
             </el-button>
@@ -141,7 +138,7 @@
             </template>
             <div class="recommendations-content">
               <el-timeline>
-                <el-timeline-item 
+<el-timeline-item 
                   v-for="(rec, index) in planResult.recommendations" 
                   :key="index"
                   :timestamp="rec.time || '全天'"
@@ -159,7 +156,7 @@
             </div>
           </el-card>
           
-          <!-- 天气信息 -->
+<!-- 天气信息 -->
           <el-card v-if="planResult.weather_info && Object.keys(planResult.weather_info).length > 0" class="plan-section">
             <template #header>
               <span class="section-title">🌤️ 天气信息</span>
@@ -229,6 +226,7 @@ const md = new MarkdownIt({
 
 // 表单数据
 const planForm = reactive({
+  travelRequirements: '', // 合并后的旅行需求输入
   destination: '',
   duration: 3,
   budget: 5000,
@@ -307,10 +305,57 @@ const handleDialogClose = (done: () => void) => {
   done()
 }
 
+// 解析旅行需求文本
+const parseTravelRequirements = (text: string) => {
+  const result = {
+    destination: '',
+    duration: 3,
+    budget: 5000,
+    travelers: 2,
+    valid: false
+  }
+  
+  if (!text.trim()) return result
+  
+  const textLower = text.toLowerCase()
+  
+  // 提取目的地（通常是最前面的部分）
+  const destinationMatch = text.match(/^[^，,]+/)
+  if (destinationMatch) {
+    result.destination = destinationMatch[0].trim()
+  }
+  
+  // 提取天数
+  const daysMatch = text.match(/(\d+)\s*天/)
+  if (daysMatch) {
+    result.duration = parseInt(daysMatch[1])
+  }
+  
+  // 提取预算
+  const budgetMatch = text.match(/预算?\s*(\d+)/) || text.match(/(\d+)\s*元/)
+  if (budgetMatch) {
+    result.budget = parseInt(budgetMatch[1])
+  }
+  
+  // 提取同行人数
+  const peopleMatch = text.match(/(\d+)\s*人/) || text.match(/同行\s*(\d+)/)
+  if (peopleMatch) {
+    result.travelers = parseInt(peopleMatch[1])
+  }
+  
+  // 验证是否至少包含目的地
+  result.valid = result.destination.length > 0
+  
+  return result
+}
+
 // 生成旅行计划
 const generatePlan = async () => {
-  if (!planForm.destination) {
-    ElMessage.warning('请输入目的地')
+  // 解析用户输入的旅行需求
+  const parsedRequirements = parseTravelRequirements(planForm.travelRequirements)
+  
+  if (!parsedRequirements.valid) {
+    ElMessage.warning('请输入有效的旅行需求，至少包含目的地信息')
     return
   }
 
@@ -318,14 +363,14 @@ const generatePlan = async () => {
   planResult.value = null
 
   try {
-    // 构建请求数据，包含偏好信息
+    // 构建请求数据，使用解析后的参数
     const requestData = {
-      destination: planForm.destination,
-      duration: planForm.duration,
-      budget: planForm.budget,
-      travelers: planForm.travelers,
+      destination: parsedRequirements.destination,
+      duration: parsedRequirements.duration,
+      budget: parsedRequirements.budget,
+      travelers: parsedRequirements.travelers,
       preferences: planForm.preferences,
-      specialRequirements: planForm.specialRequirements
+      special_requirements: planForm.specialRequirements
     }
 
     const response = await axios.post('http://localhost:8000/api/v1/ai/plan', requestData)
@@ -399,92 +444,46 @@ const getTagType = (type: string) => {
 }
 
 .input-section {
-  margin-bottom: 40px;
+  margin-bottom: 30px;
 }
 
 .input-section h3 {
   color: #333;
   margin-bottom: 20px;
-  border-left: 4px solid #409EFF;
-  padding-left: 10px;
-}
-
-.preference-selection {
-  display: flex;
-  align-items: center;
-  margin-bottom: 15px;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.preference-details {
-  width: 100%;
-  margin-top: 0;
-  padding: 20px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 8px;
-  border: 1px solid #e1e5e9;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-}
-
-.preference-details:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-}
-
-.preference-info h4 {
-  margin: 0 0 15px 0;
-  color: #409EFF;
   font-size: 18px;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
 }
 
-.preference-info h4::before {
-  content: "⭐";
-  margin-right: 8px;
-  font-size: 16px;
-}
-
-.preference-content {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.preference-item {
-  display: flex;
-  align-items: flex-start;
-  padding: 8px 0;
-  border-bottom: 1px solid #e1e5e9;
-}
-
-.preference-item:last-child {
-  border-bottom: none;
-}
-
-.preference-item strong {
-  min-width: 100px;
-  color: #495057;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.preference-item span {
-  flex: 1;
-  color: #212529;
-  line-height: 1.6;
-  font-size: 14px;
-  background: rgba(255, 255, 255, 0.7);
-  padding: 6px 10px;
+.input-hint {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #f5f7fa;
   border-radius: 4px;
-  border-left: 3px solid #409EFF;
+  border-left: 4px solid #409EFF;
+  width: 100%; /* 添加宽度100%使其与输入框同宽 */
+  box-sizing: border-box; /* 确保padding和border包含在宽度内 */
+}
+
+.input-hint p {
+  margin: 4px 0;
+  font-size: 12px;
+  color: #666;
+}
+
+/* 添加间距分隔符样式 */
+.section-divider {
+  height: 20px; /* 增加间距 */
+  margin: 20px 0; /* 上下各20px间距 */
+  border-bottom: 1px solid #e4e7ed; /* 可选：添加分隔线 */
 }
 
 .result-section {
   margin-top: 30px;
+}
+
+.result-section h3 {
+  color: #333;
+  margin-bottom: 20px;
+  font-size: 18px;
 }
 
 .plan-section {
@@ -496,153 +495,135 @@ const getTagType = (type: string) => {
   font-size: 16px;
 }
 
-/* Markdown内容样式 */
 .itinerary-content {
   line-height: 1.6;
 }
 
-.itinerary-content :deep(h1) {
-  color: #409EFF;
-  border-bottom: 2px solid #409EFF;
-  padding-bottom: 10px;
-  margin: 20px 0 15px 0;
-}
-
-.itinerary-content :deep(h2) {
-  color: #67C23A;
-  margin: 15px 0 10px 0;
-}
-
-.itinerary-content :deep(h3) {
-  color: #E6A23C;
-  margin: 10px 0 8px 0;
-}
-
-.itinerary-content :deep(p) {
-  margin: 8px 0;
-}
-
-.itinerary-content :deep(ul),
-.itinerary-content :deep(ol) {
-  margin: 8px 0;
-  padding-left: 20px;
-}
-
-.itinerary-content :deep(li) {
-  margin: 4px 0;
-}
-
-.itinerary-content :deep(blockquote) {
-  border-left: 4px solid #409EFF;
-  background-color: #f0f7ff;
-  padding: 10px 15px;
-  margin: 10px 0;
-  border-radius: 4px;
-}
-
-.itinerary-content :deep(code) {
-  background-color: #f4f4f5;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: 'Courier New', monospace;
-}
-
-.itinerary-content :deep(pre) {
-  background-color: #f4f4f5;
-  padding: 15px;
-  border-radius: 6px;
-  overflow-x: auto;
-  margin: 10px 0;
-}
-
-.itinerary-content :deep(pre code) {
-  background: none;
-  padding: 0;
-}
-.itinerary-content :deep(table) {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 10px 0;
-}
-
-.itinerary-content :deep(th),
-.itinerary-content :deep(td) {
-  border: 1px solid #dcdfe6;
-  padding: 8px 12px;
-  text-align: left;
-}
-
-.itinerary-content :deep(th) {
-  background-color: #f5f7fa;
-  font-weight: bold;
-}
-
-.itinerary-content :deep(a) {
-  color: #409EFF;
-  text-decoration: none;
-}
-
-.itinerary-content :deep(a:hover) {
-  text-decoration: underline;
-}
-
 .budget-content,
 .weather-content {
-  max-width: 600px;
+  padding: 10px 0;
 }
 
 .recommendations-content {
-  max-width: 800px;
+  padding: 10px 0;
 }
 
 .error-message {
   margin-top: 20px;
 }
-</style>
 
-/* 偏好加载状态样式 */
-.preference-loading {
-  padding: 10px;
-}
-
-/* 偏好错误状态样式 */
+/* 偏好选择区域样式 */
+.preference-loading,
 .preference-error {
-  padding: 10px;
-  text-align: center;
+  margin-bottom: 15px;
 }
 
-/* 偏好详情样式 */
+.preference-selection {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
 .preference-details {
-  margin-top: 15px;
+  width: 100%;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
+  border-radius: 8px;
   padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 6px;
-  border-left: 4px solid #409EFF;
+  margin-top: 15px;
+  border: 1px solid #e4e7ed;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.preference-details:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
 }
 
 .preference-info h4 {
   margin: 0 0 10px 0;
-  color: #303133;
+  color: #409EFF;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .preference-content {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
 .preference-item {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-start; /* 改为align-items: center让字段名和值在同一水平线 */
+  gap: 8px;
 }
 
 .preference-item strong {
-  font-weight: bold;
-  color: #606266;
   min-width: 80px;
-  margin-right: 10px;
+  color: #606266;
+  font-weight: 600;
+  line-height: 1.5; /* 添加行高确保垂直居中 */
 }
 
 .preference-item span {
-  color: #333;
   flex: 1;
+  color: #303133;
+  line-height: 1.5; /* 确保行高一致 */
 }
+
+.markdown-body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.markdown-body p {
+  margin-bottom: 16px;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 2em;
+  margin-bottom: 16px;
+}
+
+.markdown-body li {
+  margin-bottom: 8px;
+}
+
+.markdown-body code {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(175, 184, 193, 0.2);
+  border-radius: 6px;
+}
+
+.markdown-body pre {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.markdown-body pre code {
+  background: none;
+  padding: 0;
+}
+</style>
