@@ -425,5 +425,8 @@ export const useUserPreferenceStore = defineStore('userPreference', {
   }
 })
 
+// 在文件末尾添加api实例的导出
+export { api }
+
 // 删除重复的导出语句
 // export { useAuthStore, useAppStore, useUserPreferenceStore }

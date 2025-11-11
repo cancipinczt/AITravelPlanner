@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict, Any
 import logging
 from app.core.ai_client import ai_client
-from app.schemas.ai import AIPlanRequest, AIPlanResponse
+from app.schemas.ai import AIPlanRequest, AIPlanResponse, TravelRequirementsParseRequest, TravelRequirementsParseResponse
 
 logger = logging.getLogger(__name__)
 
@@ -82,3 +82,27 @@ async def get_weather(location: str) -> Dict[str, Any]:
         "humidity": "60%",
         "forecast": "未来几天天气良好"
     }
+
+@router.post("/parse-requirements", response_model=TravelRequirementsParseResponse)
+async def parse_travel_requirements(request: TravelRequirementsParseRequest) -> TravelRequirementsParseResponse:
+    """
+    解析用户输入的旅行需求，提取目的地、天数、预算、同行人数
+    """
+    try:
+        # 调用AI客户端解析旅行需求
+        parse_result = await ai_client.parse_travel_requirements(request.travel_requirements)
+        
+        if parse_result["status"] == "success":
+            return TravelRequirementsParseResponse(
+                destination=parse_result["destination"],
+                duration=parse_result["duration"],
+                budget=parse_result["budget"],
+                travelers=parse_result["travelers"],
+                status="success"
+            )
+        else:
+            raise HTTPException(status_code=400, detail=parse_result.get("error", "解析旅行需求失败"))
+            
+    except Exception as e:
+        logger.error(f"解析旅行需求失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"解析旅行需求失败: {str(e)}")

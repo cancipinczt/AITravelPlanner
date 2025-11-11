@@ -121,13 +121,28 @@
           <el-form-item>
             <el-button 
               type="primary" 
-              :loading="generating" 
+              :loading="generating || parsing" 
               @click="generatePlan"
               :disabled="!planForm.travelRequirements"
             >
-              {{ generating ? 'AI规划中...' : '生成智能行程' }}
+              {{ parsing ? '解析需求中...' : (generating ? 'AI规划中...' : '生成智能行程') }}
             </el-button>
           </el-form-item>
+
+          <!-- 添加解析结果显示区域 -->
+          <div v-if="parsedRequirements.destination" class="parsed-info">
+            <el-alert
+              title="解析结果"
+              type="info"
+              :closable="false"
+              show-icon
+            >
+              <p>目的地：{{ parsedRequirements.destination }}</p>
+              <p>旅行天数：{{ parsedRequirements.duration }}天</p>
+              <p>预算：¥{{ parsedRequirements.budget }}</p>
+              <p>同行人数：{{ parsedRequirements.travelers }}人</p>
+            </el-alert>
+          </div>
         </el-form>
       </div>
 
@@ -286,7 +301,7 @@ const planForm = reactive({
   destination: '',
   duration: 3,
   budget: 5000,
-  travelers: 2,
+travelers: 2,
   preferences: '',
   specialRequirements: ''
 })
@@ -298,6 +313,15 @@ const showPreferenceDialog = ref(false)
 const selectedPreferenceId = ref('')
 const creatingTrip = ref(false)
 const creatingPlan = ref(false)
+
+// 添加解析相关状态
+const parsing = ref(false)
+const parsedRequirements = ref({
+  destination: '',
+  duration: 0,
+  budget: 0,
+  travelers: 0
+})
 
 // 语音输入相关状态
 const isRecording = ref(false)
@@ -317,101 +341,45 @@ const selectedPreference = computed(() => {
   return preferenceStore.getPreferenceById(selectedPreferenceId.value)
 })
 
-// 创建旅行计划
-const createTravelPlan = async () => {
-  if (!planResult.value || planResult.value.status !== 'success') {
-    ElMessage.warning('请先生成有效的旅行计划')
-    return
-  }
-
-  creatingPlan.value = true
-
-  try {
-    // 解析旅行需求获取基本信息
-    const parsedRequirements = parseTravelRequirements(planForm.travelRequirements)
-    
-    // 构建旅行计划数据
-    const planData = {
-      title: `${parsedRequirements.destination} ${parsedRequirements.duration}天旅行计划`,
-      destination: parsedRequirements.destination,
-      budget: parsedRequirements.budget,
-      travelers_count: parsedRequirements.travelers,
-      days: parsedRequirements.duration,
-      preference_id: selectedPreferenceId.value || null,
-      plan: JSON.stringify(planResult.value) // 将整个计划保存为JSON字符串
-    }
-
-    const response = await axios.post('http://localhost:8000/api/v1/trips', planData, {
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    })
-    
-    ElMessage.success('旅行计划保存成功！')
-    console.log('旅行计划创建成功:', response.data)
-    
-    // 可以跳转到旅行计划页面或显示成功消息
-  } catch (error: any) {
-    console.error('创建旅行计划失败:', error)
-    ElMessage.error('保存旅行计划失败，请重试')
-  } finally {
-    creatingPlan.value = false
-  }
-}
-
 // 创建旅行计划方法
 // 在状态管理部分添加tripTitle
 const tripTitle = ref('')
 
-// 修改createTripFromPlan函数，使用用户输入的计划名称
-const createTripFromPlan = async () => {
-  if (!planResult.value || planResult.value.status !== 'success') {
-    ElMessage.warning('请先生成有效的旅行计划')
-    return
-  }
+// 导入store中配置的api实例
+import { api } from '@/stores'
 
+// 修改createTripFromPlan函数，使用配置好的api实例
+const createTripFromPlan = async () => {
   if (!tripTitle.value.trim()) {
     ElMessage.warning('请输入旅行计划名称')
     return
   }
-
-  creatingTrip.value = true
+  
   try {
-    // 解析旅行需求获取基本信息
-    const parsedRequirements = parseTravelRequirements(planForm.travelRequirements)
+    creatingTrip.value = true
     
-    // 构建旅行计划数据，使用用户输入的计划名称
+    // 使用解析出的数据创建旅行计划
     const tripData = {
       title: tripTitle.value,
-      destination: parsedRequirements.destination,
-      budget: parsedRequirements.budget,
-      travelers_count: parsedRequirements.travelers,
-      days: parsedRequirements.duration,
-      preference_id: selectedPreferenceId.value || null,
-      plan: planResult.value.itinerary // 保存完整的行程计划
+      destination: parsedRequirements.value.destination,
+      budget: parsedRequirements.value.budget,
+      travelers_count: parsedRequirements.value.travelers,
+      days: parsedRequirements.value.duration,
+      plan: planResult.value.itinerary,
+      preference_id: selectedPreferenceId.value || null
     }
-
-    const response = await fetch('http://localhost:8000/api/v1/trips', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(tripData)
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    ElMessage.success('旅行计划保存成功！')
-    // 重置输入框
+    
+    // 使用配置好的api实例，它会自动添加认证token
+    const response = await api.post('/trips', tripData)
+    
+    ElMessage.success('旅行计划创建成功！')
     tripTitle.value = ''
-    // 可选：跳转到个人中心页面查看保存的计划
-    // router.push('/profile')
-  } catch (error) {
-    console.error('保存旅行计划失败:', error)
-    ElMessage.error('保存旅行计划失败，请重试')
+    planResult.value = null
+    
+    // 可选：跳转到旅行计划页面或刷新列表
+  } catch (error: any) {
+    console.error('创建旅行计划失败:', error)
+    ElMessage.error('创建旅行计划失败：' + (error.response?.data?.detail || '未知错误'))
   } finally {
     creatingTrip.value = false
   }
@@ -606,82 +574,72 @@ const handleDialogClose = (done: () => void) => {
 }
 
 // 解析旅行需求文本
-const parseTravelRequirements = (text: string) => {
-  const result = {
-    destination: '',
-    duration: 3,
-    budget: 5000,
-    travelers: 2,
-    valid: false
+const parseTravelRequirements = async () => {
+  try {
+    parsing.value = true
+    // 使用配置好的api实例
+    const response = await api.post('/ai/parse-requirements', {
+      travel_requirements: planForm.travelRequirements
+    })
+    
+    if (response.data.status === 'success') {
+      // 使用解析出的数据填充表单
+      parsedRequirements.value = {
+        destination: response.data.destination,
+        duration: response.data.duration,
+        budget: response.data.budget,
+        travelers: response.data.travelers
+      }
+      return parsedRequirements.value
+    } else {
+      ElMessage.error('解析旅行需求失败：' + (response.data.error || '未知错误'))
+      return null
+    }
+  } catch (error: any) {
+    console.error('解析旅行需求失败:', error)
+    ElMessage.error('解析旅行需求失败，请检查网络连接或稍后重试')
+    return null
+  } finally {
+    parsing.value = false
   }
-  
-  if (!text.trim()) return result
-  
-  const textLower = text.toLowerCase()
-  
-  // 提取目的地（通常是最前面的部分）
-  const destinationMatch = text.match(/^[^，,]+/)
-  if (destinationMatch) {
-    result.destination = destinationMatch[0].trim()
-  }
-  
-  // 提取天数
-  const daysMatch = text.match(/(\d+)\s*天/)
-  if (daysMatch) {
-    result.duration = parseInt(daysMatch[1])
-  }
-  
-  // 提取预算
-  const budgetMatch = text.match(/预算?\s*(\d+)/) || text.match(/(\d+)\s*元/)
-  if (budgetMatch) {
-    result.budget = parseInt(budgetMatch[1])
-  }
-  
-  // 提取同行人数
-  const peopleMatch = text.match(/(\d+)\s*人/) || text.match(/同行\s*(\d+)/)
-  if (peopleMatch) {
-    result.travelers = parseInt(peopleMatch[1])
-  }
-  
-  // 验证是否至少包含目的地
-  result.valid = result.destination.length > 0
-  
-  return result
 }
-// 生成旅行计划
+
+// 修改generatePlan函数，使用配置好的api实例并确保传递偏好参数
 const generatePlan = async () => {
-  // 解析用户输入的旅行需求
-  const parsedRequirements = parseTravelRequirements(planForm.travelRequirements)
-  
-  if (!parsedRequirements.valid) {
-    ElMessage.warning('请输入有效的旅行需求，至少包含目的地信息')
+  if (!planForm.travelRequirements.trim()) {
+    ElMessage.warning('请输入旅行需求')
     return
   }
-
-  generating.value = true
-  planResult.value = null
-
+  
   try {
-    // 构建请求数据，使用解析后的参数
-    const requestData = {
-      destination: parsedRequirements.destination,
-      duration: parsedRequirements.duration,
-      budget: parsedRequirements.budget,
-      travelers: parsedRequirements.travelers,
-      preferences: planForm.preferences,
-      special_requirements: planForm.specialRequirements
+    generating.value = true
+    
+    // 第一步：解析旅行需求
+    const parsedData = await parseTravelRequirements()
+    if (!parsedData) {
+      return // 解析失败，直接返回
     }
-
-    const response = await axios.post('http://localhost:8000/api/v1/ai/plan', requestData)
-    planResult.value = response.data
-    ElMessage.success('旅行计划生成成功！')
+    
+    // 第二步：使用解析出的数据调用AI生成计划
+    // 确保正确传递旅行偏好
+    const response = await api.post('/ai/plan', {
+      destination: parsedData.destination,
+      duration: parsedData.duration,
+      budget: parsedData.budget,
+      travelers: parsedData.travelers,
+      preferences: selectedPreference.value ? selectedPreference.value.travel_preferences : '',
+      special_requirements: selectedPreference.value ? selectedPreference.value.special_requirements : ''
+    })
+    
+    if (response.data.status === 'success') {
+      planResult.value = response.data
+      ElMessage.success('AI旅行计划生成成功！')
+    } else {
+      ElMessage.error('生成旅行计划失败：' + (response.data.error || '未知错误'))
+    }
   } catch (error: any) {
     console.error('生成旅行计划失败:', error)
-    planResult.value = {
-      status: 'error',
-      error: error.response?.data?.detail || '生成失败，请重试'
-    }
-    ElMessage.error('生成旅行计划失败')
+    ElMessage.error('生成旅行计划失败，请检查网络连接或稍后重试')
   } finally {
     generating.value = false
   }
@@ -943,7 +901,6 @@ const getTagType = (type: string) => {
   width: 32px;
   height: 32px;
 }
-
 .recording-status {
   display: flex;
   align-items: center;
@@ -1002,7 +959,19 @@ const getTagType = (type: string) => {
   color: #666;
   font-size: 14px;
 }
-/* 在样式部分添加 */
+.parsed-info {
+  margin: 20px 0;
+  background-color: #f0f9ff;
+  border: 1px solid #e1f5fe;
+  border-radius: 4px;
+  padding: 15px;
+}
+
+.parsed-info p {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
 .trip-name-input {
   margin-bottom: 15px;
   text-align: center;
