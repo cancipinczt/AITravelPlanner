@@ -70,16 +70,9 @@
               >
                 管理偏好
               </el-button>
-              <el-button 
-                type="success" 
-                link 
-                @click="showCreateDialog = true"
-              >
-                创建新偏好
-              </el-button>
             </div>
             
-            <!-- 显示选中偏好的详细信息 -->
+            <!-- 显示选中偏好的详细信息 - 移动到下方 -->
             <div v-if="selectedPreference" class="preference-details">
               <div class="preference-info">
                 <h4>{{ selectedPreference.name }}</h4>
@@ -154,7 +147,7 @@
                   :timestamp="rec.time || '全天'"
                   placement="top"
                 >
-                  <el-card>
+<el-card>
                     <h4>{{ rec.name }}</h4>
                     <p>{{ rec.description }}</p>
                     <el-tag v-if="rec.type" :type="getTagType(rec.type)">
@@ -209,18 +202,6 @@
         @preference-deleted="handlePreferenceDeleted"
       />
     </el-dialog>
-
-    <!-- 创建偏好对话框 -->
-    <el-dialog 
-      v-model="showCreateDialog" 
-      title="创建旅行偏好" 
-      width="500px"
-      :before-close="handleDialogClose"
-    >
-      <UserPreferenceCreator 
-        @preference-created="handlePreferenceCreated"
-      />
-    </el-dialog>
   </div>
 </template>
 
@@ -233,7 +214,6 @@ import { useUserPreferenceStore } from '@/stores'
 import { ElMessage } from 'element-plus'
 import MarkdownIt from 'markdown-it'
 import UserPreferenceManager from '@/components/UserPreferenceManager.vue'
-import UserPreferenceCreator from '@/components/UserPreferenceCreator.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -261,7 +241,6 @@ const planForm = reactive({
 const generating = ref(false)
 const planResult = ref<any>(null)
 const showPreferenceDialog = ref(false)
-const showCreateDialog = ref(false)
 const selectedPreferenceId = ref('')
 
 // 计算属性
@@ -433,47 +412,75 @@ const getTagType = (type: string) => {
 .preference-selection {
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
   flex-wrap: wrap;
   gap: 10px;
 }
 
 .preference-details {
-  margin-top: 15px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 6px;
-  border-left: 4px solid #409EFF;
+  width: 100%;
+  margin-top: 0;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  border: 1px solid #e1e5e9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.preference-details:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
 }
 
 .preference-info h4 {
-  margin: 0 0 10px 0;
+  margin: 0 0 15px 0;
   color: #409EFF;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: bold;
+  display: flex;
+  align-items: center;
+}
+
+.preference-info h4::before {
+  content: "⭐";
+  margin-right: 8px;
+  font-size: 16px;
 }
 
 .preference-content {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .preference-item {
   display: flex;
   align-items: flex-start;
+  padding: 8px 0;
+  border-bottom: 1px solid #e1e5e9;
+}
+
+.preference-item:last-child {
+  border-bottom: none;
 }
 
 .preference-item strong {
-  min-width: 80px;
-  color: #606266;
-  font-weight: bold;
+  min-width: 100px;
+  color: #495057;
+  font-weight: 600;
+  font-size: 14px;
 }
 
 .preference-item span {
   flex: 1;
-  color: #333;
-  line-height: 1.5;
+  color: #212529;
+  line-height: 1.6;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 6px 10px;
+  border-radius: 4px;
+  border-left: 3px solid #409EFF;
 }
 
 .result-section {
@@ -552,7 +559,6 @@ const getTagType = (type: string) => {
   background: none;
   padding: 0;
 }
-
 .itinerary-content :deep(table) {
   width: 100%;
   border-collapse: collapse;
