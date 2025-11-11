@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, date  # 添加date导入
 from decimal import Decimal
 
 # 旅行计划创建请求 - 简化版
@@ -63,29 +63,20 @@ class TripResponse(BaseModel):
             Decimal: lambda v: float(v) if v else None
         }
 
-# 费用记录 - 保持不变
-class ExpenseCreate(BaseModel):
-    category: str
-    amount: Decimal
-    currency: str = "CNY"
-    description: Optional[str] = None
-    expense_date: datetime
-    payment_method: Optional[str] = None
-    is_planned: bool = False
-    tags: Optional[list[str]] = None
-
-class ExpenseResponse(BaseModel):
-    id: UUID
-    trip_id: UUID
-    category: str
-    amount: Decimal
-    currency: str
-    description: Optional[str] = None
-    expense_date: datetime
-    payment_method: Optional[str] = None
-    is_planned: bool
-    tags: Optional[list[str]] = None
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
+# 费用记录
+# 删除费用记录相关模型，因为它们已经在独立的expense.py文件中定义
+# class ExpenseCreate(BaseModel):
+#     amount: Decimal
+#     description: Optional[str] = None
+#     expense_date: date
+# 
+# class ExpenseResponse(BaseModel):
+#     id: UUID
+#     trip_id: UUID
+#     amount: Decimal
+#     description: Optional[str] = None
+#     expense_date: date
+#     created_at: datetime
+# 
+#     class Config:
+#         from_attributes = True

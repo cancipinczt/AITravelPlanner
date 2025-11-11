@@ -67,6 +67,12 @@ export const useAuthStore = defineStore('auth', {
     token: localStorage.getItem('token'),
     isAuthenticated: !!localStorage.getItem('token')
   }),
+  
+  getters: {
+    // 添加api实例的getter
+    api: () => api
+  },
+  
   actions: {
     // 添加token检查方法
     checkTokenValidity() {
@@ -212,20 +218,23 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     
-    // 添加获取用户信息的方法
+    // 修改获取用户信息的方法，返回统一格式的结果
     async getUserProfile() {
       if (!this.token) {
-        throw new Error('No token available')
+        return { success: false, message: 'No token available' }
       }
       
       try {
         const response = await api.get('/auth/me')
         // 后端返回的是UserResponse对象，直接赋值给user
         this.user = response.data
-        return this.user
-      } catch (error) {
+        return { success: true, data: this.user }
+      } catch (error: any) {
         console.error('获取用户信息失败:', error)
-        throw error
+        return { 
+          success: false, 
+          message: error.response?.data?.detail || '获取用户信息失败' 
+        }
       }
     },
     
@@ -244,7 +253,14 @@ export const useAuthStore = defineStore('auth', {
       // 如果token有效但用户信息为空，获取用户信息
       if (this.isAuthenticated && !this.user) {
         try {
-          await this.getUserProfile()
+          const result = await this.getUserProfile()
+          if (!result.success) {
+            console.warn('获取用户信息失败:', result.message)
+            // 如果获取用户信息失败，检查错误类型
+            if (result.message?.includes('401') || result.message?.includes('403')) {
+              this.logout()
+            }
+          }
         } catch (error) {
           console.error('初始化用户信息失败:', error)
           // 如果获取用户信息失败，不立即登出，而是检查错误类型

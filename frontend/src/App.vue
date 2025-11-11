@@ -7,6 +7,7 @@
           <div class="nav-menu">
             <router-link to="/" class="nav-link">首页</router-link>
             <router-link to="/travel-plans" class="nav-link">旅行计划</router-link>
+            <router-link to="/expense-management" class="nav-link">费用管理</router-link>
             <div class="user-menu">
               <el-dropdown>
                 <span class="user-info">

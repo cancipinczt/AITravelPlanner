@@ -7,6 +7,8 @@ import AIPlanningView from '../views/AIPlanningView.vue'
 import TravelPlansView from '../views/TravelPlansView.vue'
 import MapDemoView from '../views/MapDemoView.vue'
 import MapApiTestView from '../views/MapApiTestView.vue'
+import ExpenseManagementView from '../views/ExpenseManagementView.vue'
+import TripExpensesView from '../views/TripExpensesView.vue'
 import { useAuthStore } from '@/stores'
 
 const router = createRouter({
@@ -58,9 +60,15 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/ai-planning',
-      name: 'ai-planning',
-      component: AIPlanningView,
+      path: '/expense-management',
+      name: 'expense-management',
+      component: ExpenseManagementView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/trip-expenses/:tripId',
+      name: 'trip-expenses',
+      component: TripExpensesView,
       meta: { requiresAuth: true }
     }
   ]

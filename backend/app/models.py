@@ -34,20 +34,14 @@ class Trip(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-# 费用记录表 - 保持不变
+# 按照需求文档5.1.4规范更新费用记录表
 class Expense(Base):
     __tablename__ = "expenses"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     trip_id = Column(UUID(as_uuid=True), index=True)
-    category = Column(String(50), nullable=False)
     amount = Column(DECIMAL(10, 2), nullable=False)
-    currency = Column(String(3), default='CNY')
     description = Column(Text)
-    expense_date = Column(DateTime, nullable=False)
-    payment_method = Column(String(50))
-    receipt_url = Column(String(500))
-    is_planned = Column(Boolean, default=False)
-    tags = Column(Text)  # 改为Text类型存储标签
+    expense_date = Column(Date, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.api_v1.endpoints import health, travel, auth, user, trips, ai, speech, maps
+from app.api.api_v1.endpoints import health, travel, auth, user, trips, ai, speech, maps, expenses
 
 api_router = APIRouter()
 
@@ -26,3 +26,5 @@ api_router.include_router(speech.router, prefix="/speech", tags=["speech"])
 
 # 包含地图API路由（新增）
 api_router.include_router(maps.router, prefix="/maps", tags=["maps"])
+
+api_router.include_router(expenses.router, prefix="", tags=["费用管理"])  # 费用管理使用根路径

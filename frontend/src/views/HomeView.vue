@@ -16,6 +16,18 @@
         </div>
       </el-card>
 
+      <!-- 费用管理 -->
+      <el-card class="nav-card" shadow="hover">
+        <div class="card-content">
+          <i class="el-icon-money card-icon"></i>
+          <h3>费用管理</h3>
+          <p>记录和管理旅行费用</p>
+          <el-button type="primary" @click="$router.push('/expense-management')">
+            管理费用
+          </el-button>
+        </div>
+      </el-card>
+
       <!-- 个人中心 -->
       <el-card class="nav-card" shadow="hover">
         <div class="card-content">
@@ -101,40 +113,44 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
 import { useAuthStore } from '@/stores'
+import { api } from '@/stores'  // 直接导入api实例
+import { Connection, User, MapLocation, Money, Calendar } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const testResult = ref('')
+// 添加connectionStatus定义
+const connectionStatus = ref(null)
 
-// 页面加载时检查用户认证状态
-onMounted(async () => {
+// 测试后端连接
+const testBackendConnection = async () => {
+  try {
+    testResult.value = '正在连接后端...'
+    const response = await api.get('/health')
+    testResult.value = `后端连接成功: ${response.data.message}`
+    connectionStatus.value = 'success'
+  } catch (error) {
+    testResult.value = '后端连接失败'
+    connectionStatus.value = 'error'
+    console.error('后端连接测试失败:', error)
+  }
+}
+
+// 页面加载时检查认证状态
+onMounted(() => {
   if (!authStore.isAuthenticated) {
     router.push('/login')
     return
   }
-  
-  // 如果已登录但用户信息为空，获取用户信息
-  if (authStore.isAuthenticated && !authStore.user) {
-    await authStore.getUserProfile()
-  }
+  testBackendConnection()
 })
 
-const testBackendConnection = async () => {
-  try {
-    const response = await axios.get('http://localhost:8000/health')
-    testResult.value = `后端连接成功: ${JSON.stringify(response.data)}`
-  } catch (error) {
-    testResult.value = `后端连接失败: ${error}`
-  }
-}
-
-// 在methods中添加导航方法
+// 导航到不同页面
 const navigateTo = (path: string) => {
   router.push(path)
 }
-
 </script>
 
 <style scoped>

@@ -3,8 +3,9 @@ from typing import List, Optional
 from uuid import UUID
 from app.core.supabase_client import get_supabase_client
 from app.core.auth import get_current_user
-from app.schemas.trip import TripCreate, TripResponse, TripUpdate, ExpenseCreate, ExpenseResponse, TripBriefResponse
+from app.schemas.trip import TripCreate, TripResponse, TripUpdate, TripBriefResponse
 from decimal import Decimal
+from pydantic import BaseModel, Field
 
 router = APIRouter()
 
@@ -22,6 +23,22 @@ def serialize_fields(data_dict):
         else:
             serialized[key] = value
     return serialized
+
+# 旅行计划总预算统计响应模型
+class TripBudgetSummaryResponse(BaseModel):
+    total_budget: float = Field(..., description="总预算")
+    trip_count: int = Field(..., description="旅行计划数量")
+
+    class Config:
+        from_attributes = True
+
+# 总预算统计响应模型
+class TotalBudgetSummaryResponse(BaseModel):
+    total_budget: float = Field(..., description="总预算")
+    budget_trip_count: int = Field(..., description="有预算的旅行计划数量")
+
+    class Config:
+        from_attributes = True
 
 # 旅行计划API - 按照简化后的表结构
 
@@ -161,76 +178,42 @@ async def delete_trip(
     
     return None
 
-# 费用管理API - 保持不变
-@router.post("/trips/{trip_id}/expenses", response_model=ExpenseResponse, status_code=status.HTTP_201_CREATED)
-async def create_expense(
-    trip_id: UUID,
-    expense_data: ExpenseCreate,
+@router.get("/users/{user_id}/budget-summary", response_model=TripBudgetSummaryResponse)
+async def get_user_budget_summary(
+    user_id: UUID,
     supabase = Depends(get_supabase_client),
     current_user = Depends(get_current_user)
 ):
-    """添加费用记录"""
-    # 验证旅行计划权限
-    trip_response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user['id'])).execute()
-    
-    if not trip_response.data:
+    """获取用户所有旅行计划的总预算统计"""
+    # 验证用户权限（只能查看自己的数据）
+    if str(current_user['id']) != str(user_id):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="旅行计划不存在"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="无权访问其他用户的数据"
         )
     
-    # 创建费用记录
-    expense_dict = expense_data.dict()
-    expense_dict['trip_id'] = str(trip_id)
+    # 获取用户的所有旅行计划
+    trips_response = supabase.table('trips').select('budget').eq('user_id', str(user_id)).execute()
     
-    # 序列化字段（处理Decimal和UUID）
-    expense_dict = serialize_fields(expense_dict)
+    if not trips_response.data:
+        # 如果用户没有旅行计划，返回默认值
+        return TripBudgetSummaryResponse(total_budget=0.0, trip_count=0)
     
-    response = supabase.table('expenses').insert(expense_dict).execute()
+    # 计算总预算
+    total_budget = 0.0
+    trip_count = len(trips_response.data)
     
-    if response.data:
-        return response.data[0]
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="创建费用记录失败"
-        )
+    for trip in trips_response.data:
+        if trip.get('budget') is not None:
+            try:
+                total_budget += float(trip['budget'])
+            except (ValueError, TypeError):
+                # 如果预算转换失败，跳过该记录
+                continue
+    
+    return TripBudgetSummaryResponse(
+        total_budget=round(total_budget, 2),  # 保留2位小数
+        trip_count=trip_count
+    )
 
-@router.get("/trips/{trip_id}/expenses", response_model=List[ExpenseResponse])
-async def get_expenses(
-    trip_id: UUID,
-    supabase = Depends(get_supabase_client),
-    current_user = Depends(get_current_user)
-):
-    """获取费用列表"""
-    # 验证旅行计划权限
-    trip_response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user['id'])).execute()
-    
-    if not trip_response.data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="旅行计划不存在"
-        )
-    
-    response = supabase.table('expenses').select('*').eq('trip_id', str(trip_id)).execute()
-    
-    return response.data if response.data else []
-
-@router.get("/trips/{trip_id}/budget-analysis")
-async def get_budget_analysis(
-    trip_id: UUID,
-    supabase = Depends(get_supabase_client),
-    current_user = Depends(get_current_user)
-):
-    """预算分析报告"""
-    # 验证旅行计划权限
-    trip_response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user['id'])).execute()
-    
-    if not trip_response.data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="旅行计划不存在"
-        )
-    
-    # TODO: 实现预算分析逻辑
-    return {"message": "预算分析功能待实现"}
+# 删除原有的费用管理API，它们已经移到独立的expenses.py文件中

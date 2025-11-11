@@ -90,12 +90,15 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
 import { useAuthStore } from '@/stores'
+import { api } from '@/stores'  // 直接导入api实例
+import { Refresh, Plus } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const travelPlans = ref([])
+const loading = ref(false)
+const error = ref('')
 
 // 页面加载时检查认证状态
 onMounted(() => {
@@ -103,14 +106,21 @@ onMounted(() => {
     router.push('/login')
     return
   }
+  fetchTravelPlans()
 })
 
 const fetchTravelPlans = async () => {
   try {
-    const response = await axios.get('http://localhost:8000/api/v1/travel/travel-plans')
-    travelPlans.value = response.data.travel_plans
-  } catch (error) {
-    console.error('获取旅行计划失败:', error)
+    loading.value = true
+    error.value = ''
+    // 直接使用导入的api实例，路径不需要包含/api/v1前缀
+    const response = await api.get('/trips')
+    travelPlans.value = response.data
+  } catch (err) {
+    console.error('获取旅行计划失败:', err)
+    error.value = err.response?.data?.detail || '网络错误'
+  } finally {
+    loading.value = false
   }
 }
 </script>
