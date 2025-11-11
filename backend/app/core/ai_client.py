@@ -16,7 +16,7 @@ class AIClient:
             logger.warning("ALIYUN_AI_KEY not found in environment variables")
         
         # 配置模型
-        self.model = "qwen-turbo"  # 使用qwen-turbo模型，支持长文本生成
+        self.model = "qwen-plus-2025-07-28"  # 使用qwen-turbo模型，支持长文本生成
         
         # 系统提示词 - 专门针对旅行规划
         self.system_prompt = """你是一个专业的旅行规划专家。请根据用户的需求生成详细、个性化的旅行计划。

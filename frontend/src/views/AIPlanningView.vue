@@ -75,8 +75,7 @@
                 重试加载
               </el-button>
             </div>
-            
-            <!-- 偏好选择 -->
+<!-- 偏好选择 -->
             <div v-else class="preference-selection">
               <el-select 
                 v-model="selectedPreferenceId" 
@@ -131,12 +130,36 @@
           </el-form-item>
         </el-form>
       </div>
-      
+
       <!-- 结果显示区域 -->
       <div v-if="planResult" class="result-section">
         <h3>AI生成的旅行计划</h3>
         
         <div v-if="planResult.status === 'success'" class="plan-details">
+          <!-- 创建旅行计划按钮 -->
+          <div class="create-trip-section">
+            <div class="trip-name-input">
+              <el-form-item label="计划名称">
+                <el-input 
+                  v-model="tripTitle" 
+                  placeholder="为您的旅行计划取一个名字，例如：东京5日游"
+                  style="width: 300px; margin-right: 10px;"
+                />
+              </el-form-item>
+            </div>
+            
+            <el-button 
+              type="success" 
+              size="large" 
+              @click="createTripFromPlan"
+              :loading="creatingTrip"
+              :disabled="!tripTitle"
+            >
+              💾 保存为旅行计划
+            </el-button>
+            <p class="create-trip-hint">将此计划保存到您的旅行计划列表中</p>
+          </div>
+      
           <!-- 行程安排 -->
           <el-card class="plan-section">
             <template #header>
@@ -144,7 +167,7 @@
             </template>
             <div class="itinerary-content markdown-body" v-html="renderMarkdown(planResult.itinerary)"></div>
           </el-card>
-          
+      
           <!-- 预算使用 -->
           <el-card v-if="Object.keys(planResult.budget_usage).length > 0" class="plan-section">
             <template #header>
@@ -161,8 +184,8 @@
                 </el-descriptions-item>
               </el-descriptions>
             </div>
-</el-card>
-          
+          </el-card>
+      
           <!-- 推荐信息 -->
           <el-card v-if="planResult.recommendations && planResult.recommendations.length > 0" class="plan-section">
             <template #header>
@@ -187,8 +210,8 @@
               </el-timeline>
             </div>
           </el-card>
-          
-<!-- 天气信息 -->
+      
+          <!-- 天气信息 -->
           <el-card v-if="planResult.weather_info && Object.keys(planResult.weather_info).length > 0" class="plan-section">
             <template #header>
               <span class="section-title">🌤️ 天气信息</span>
@@ -273,6 +296,8 @@ const generating = ref(false)
 const planResult = ref<any>(null)
 const showPreferenceDialog = ref(false)
 const selectedPreferenceId = ref('')
+const creatingTrip = ref(false)
+const creatingPlan = ref(false)
 
 // 语音输入相关状态
 const isRecording = ref(false)
@@ -291,6 +316,106 @@ const selectedPreference = computed(() => {
   if (!selectedPreferenceId.value) return null
   return preferenceStore.getPreferenceById(selectedPreferenceId.value)
 })
+
+// 创建旅行计划
+const createTravelPlan = async () => {
+  if (!planResult.value || planResult.value.status !== 'success') {
+    ElMessage.warning('请先生成有效的旅行计划')
+    return
+  }
+
+  creatingPlan.value = true
+
+  try {
+    // 解析旅行需求获取基本信息
+    const parsedRequirements = parseTravelRequirements(planForm.travelRequirements)
+    
+    // 构建旅行计划数据
+    const planData = {
+      title: `${parsedRequirements.destination} ${parsedRequirements.duration}天旅行计划`,
+      destination: parsedRequirements.destination,
+      budget: parsedRequirements.budget,
+      travelers_count: parsedRequirements.travelers,
+      days: parsedRequirements.duration,
+      preference_id: selectedPreferenceId.value || null,
+      plan: JSON.stringify(planResult.value) // 将整个计划保存为JSON字符串
+    }
+
+    const response = await axios.post('http://localhost:8000/api/v1/trips', planData, {
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    })
+    
+    ElMessage.success('旅行计划保存成功！')
+    console.log('旅行计划创建成功:', response.data)
+    
+    // 可以跳转到旅行计划页面或显示成功消息
+  } catch (error: any) {
+    console.error('创建旅行计划失败:', error)
+    ElMessage.error('保存旅行计划失败，请重试')
+  } finally {
+    creatingPlan.value = false
+  }
+}
+
+// 创建旅行计划方法
+// 在状态管理部分添加tripTitle
+const tripTitle = ref('')
+
+// 修改createTripFromPlan函数，使用用户输入的计划名称
+const createTripFromPlan = async () => {
+  if (!planResult.value || planResult.value.status !== 'success') {
+    ElMessage.warning('请先生成有效的旅行计划')
+    return
+  }
+
+  if (!tripTitle.value.trim()) {
+    ElMessage.warning('请输入旅行计划名称')
+    return
+  }
+
+  creatingTrip.value = true
+  try {
+    // 解析旅行需求获取基本信息
+    const parsedRequirements = parseTravelRequirements(planForm.travelRequirements)
+    
+    // 构建旅行计划数据，使用用户输入的计划名称
+    const tripData = {
+      title: tripTitle.value,
+      destination: parsedRequirements.destination,
+      budget: parsedRequirements.budget,
+      travelers_count: parsedRequirements.travelers,
+      days: parsedRequirements.duration,
+      preference_id: selectedPreferenceId.value || null,
+      plan: planResult.value.itinerary // 保存完整的行程计划
+    }
+
+    const response = await fetch('http://localhost:8000/api/v1/trips', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(tripData)
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    ElMessage.success('旅行计划保存成功！')
+    // 重置输入框
+    tripTitle.value = ''
+    // 可选：跳转到个人中心页面查看保存的计划
+    // router.push('/profile')
+  } catch (error) {
+    console.error('保存旅行计划失败:', error)
+    ElMessage.error('保存旅行计划失败，请重试')
+  } finally {
+    creatingTrip.value = false
+  }
+}
 
 // 生命周期
 onMounted(async () => {
@@ -358,7 +483,7 @@ const startVoiceInput = async () => {
     
     websocket.value.onopen = () => {
       isWebSocketConnected.value = true
-      isRecording.value = true
+isRecording.value = true
       ElMessage.success('语音输入已开始，请开始说话...')
     }
     
@@ -572,7 +697,7 @@ const renderMarkdown = (text: string) => {
 const formatWeatherKey = (key: string) => {
   const map: Record<string, string> = {
     'temperature': '温度',
-    'weather': '天气',
+'weather': '天气',
     'humidity': '湿度',
     'forecast': '预报'
   }
@@ -633,8 +758,8 @@ const getTagType = (type: string) => {
   background-color: #f5f7fa;
   border-radius: 4px;
   border-left: 4px solid #409EFF;
-  width: 100%; /* 添加宽度100%使其与输入框同宽 */
-  box-sizing: border-box; /* 确保padding和border包含在宽度内 */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .input-hint p {
@@ -643,11 +768,10 @@ const getTagType = (type: string) => {
   color: #666;
 }
 
-/* 添加间距分隔符样式 */
 .section-divider {
-  height: 20px; /* 增加间距 */
-  margin: 20px 0; /* 上下各20px间距 */
-  border-bottom: 1px solid #e4e7ed; /* 可选：添加分隔线 */
+  height: 20px;
+  margin: 20px 0;
+  border-bottom: 1px solid #e4e7ed;
 }
 
 .result-section {
@@ -674,10 +798,7 @@ const getTagType = (type: string) => {
 }
 
 .budget-content,
-.weather-content {
-  padding: 10px 0;
-}
-
+.weather-content,
 .recommendations-content {
   padding: 10px 0;
 }
@@ -729,7 +850,7 @@ const getTagType = (type: string) => {
 
 .preference-item {
   display: flex;
-  align-items: flex-start; /* 改为align-items: center让字段名和值在同一水平线 */
+  align-items: center;
   gap: 8px;
 }
 
@@ -737,15 +858,16 @@ const getTagType = (type: string) => {
   min-width: 80px;
   color: #606266;
   font-weight: 600;
-  line-height: 1.5; /* 添加行高确保垂直居中 */
+  line-height: 1.5;
 }
 
 .preference-item span {
   flex: 1;
   color: #303133;
-  line-height: 1.5; /* 确保行高一致 */
+  line-height: 1.5;
 }
 
+/* Markdown样式 */
 .markdown-body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   font-size: 14px;
@@ -804,15 +926,17 @@ const getTagType = (type: string) => {
 /* 语音输入样式 */
 .travel-requirements-input {
   position: relative;
+  width: 100%;
 }
 
 .voice-input-container {
   position: absolute;
-  right: 10px;
+  right: 30px;
   top: 10px;
   display: flex;
   align-items: center;
   gap: 8px;
+  z-index: 10;
 }
 
 .voice-btn {
@@ -848,84 +972,49 @@ const getTagType = (type: string) => {
   }
 }
 
-/* 确保输入框有足够的右边距给语音按钮 */
+/* Element Plus组件样式覆盖 */
 :deep(.el-textarea__inner) {
   padding-right: 50px;
-  width: calc(100% - 20px); /* 距离父组件右边缘20px */
-  margin-right: 20px; /* 添加右边距 */
+  width: calc(100% - 20px);
+  margin-right: 20px;
 }
 
-/* 语音输入样式 */
-.travel-requirements-input {
-  position: relative;
-  width: 100%; /* 确保容器宽度为100% */
-}
-
-.voice-input-container {
-  position: absolute;
-  right: 30px; /* 调整位置，考虑右边距 */
-  top: 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  z-index: 10; /* 确保按钮在输入框上方 */
-}
-
-.voice-btn {
-  width: 32px;
-  height: 32px;
-}
-
-.recording-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #f56c6c;
-}
-
-.recording-dot {
-  width: 8px;
-  height: 8px;
-  background-color: #f56c6c;
-  border-radius: 50%;
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-/* 调整el-form-item的宽度 */
 :deep(.el-form-item__content) {
   width: 100%;
 }
 
-/* 确保输入框容器宽度正确 */
 :deep(.el-textarea) {
   width: 100%;
 }
 
-.markdown-body pre {
-  padding: 16px;
-  overflow: auto;
-  font-size: 85%;
-  line-height: 1.45;
-  background-color: #f6f8fa;
-  border-radius: 6px;
-  margin-bottom: 16px;
+/* 创建旅行计划按钮样式 */
+.create-trip-section {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
 }
 
-.markdown-body pre code {
-  background: none;
-  padding: 0;
+.create-trip-hint {
+  margin-top: 10px;
+  color: #666;
+  font-size: 14px;
 }
+/* 在样式部分添加 */
+.trip-name-input {
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.trip-name-input .el-form-item {
+  margin-bottom: 0;
+}
+
+.trip-name-input .el-form-item__label {
+  font-weight: bold;
+  color: #333;
+}
+
 </style>

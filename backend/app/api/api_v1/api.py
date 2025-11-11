@@ -16,7 +16,7 @@ api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(user.router, prefix="/user", tags=["user"])
 
 # 包含新的旅行计划API路由（按照需求文档4.1.3规范）
-api_router.include_router(trips.router, prefix="/trips", tags=["trips"])
+api_router.include_router(trips.router, prefix="", tags=["trips"])
 
 # 包含AI规划API路由（按照需求文档4.1.6规范）
 api_router.include_router(ai.router, prefix="/ai", tags=["ai"])

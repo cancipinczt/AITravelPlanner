@@ -27,6 +27,79 @@
         </div>
       </el-card>
       
+      <!-- 旅行计划管理卡片 -->
+      <el-card class="trips-card">
+        <template #header>
+          <div class="card-header">
+            <span>旅行计划管理</span>
+            <el-button 
+              type="primary" 
+size="small" 
+              @click="goToAIPlanning"
+            >
+              创建新计划
+            </el-button>
+          </div>
+        </template>
+        
+        <!-- 加载状态 -->
+        <div v-if="tripsLoading" class="loading-state">
+          <el-skeleton :rows="3" animated />
+        </div>
+        
+        <!-- 错误状态 -->
+        <div v-else-if="tripsError" class="error-state">
+          <el-alert
+            :title="`加载旅行计划失败: ${tripsError}`"
+            type="error"
+            show-icon
+            :closable="false"
+          />
+          <el-button type="primary" @click="loadTrips" style="margin-top: 10px;">
+            重试加载
+          </el-button>
+        </div>
+        
+        <!-- 旅行计划列表 -->
+        <div v-else-if="trips.length > 0" class="trips-list">
+          <el-table :data="trips" style="width: 100%">
+            <el-table-column prop="title" label="标题" min-width="120" />
+            <el-table-column prop="destination" label="目的地" min-width="100" />
+            <el-table-column prop="budget" label="预算" min-width="100">
+              <template #default="scope">
+                {{ scope.row.budget ? `¥${scope.row.budget}` : '未设置' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="travelers_count" label="同行人数" min-width="100" />
+            <el-table-column prop="days" label="天数" min-width="80" />
+            <el-table-column prop="preference_name" label="偏好" min-width="120">
+              <template #default="scope">
+                {{ scope.row.preference_name || '未设置' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="created_at" label="创建时间" min-width="120">
+              <template #default="scope">
+                {{ formatDate(scope.row.created_at) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" min-width="120" fixed="right">
+              <template #default="scope">
+                <el-button size="small" @click="editTrip(scope.row)">编辑</el-button>
+                <el-button size="small" type="danger" @click="deleteTrip(scope.row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+        
+        <!-- 无旅行计划提示 -->
+        <div v-else class="no-trips">
+          <el-empty description="暂无旅行计划" :image-size="80">
+            <p class="empty-text">您还没有创建任何旅行计划</p>
+            <el-button type="primary" @click="goToAIPlanning">立即创建</el-button>
+          </el-empty>
+        </div>
+      </el-card>
+      
       <!-- 旅行偏好管理卡片 -->
       <el-card class="preference-card">
         <template #header>
@@ -108,6 +181,47 @@
       </el-card>
     </div>
     
+    <!-- 编辑旅行计划对话框 -->
+    <el-dialog 
+      v-model="showTripEditDialog" 
+      :title="`编辑旅行计划 - ${editingTrip?.title}`" 
+      width="1000px"
+      top="5vh"
+    >
+      <el-form :model="editingTrip" label-width="100px">
+        <el-form-item label="标题">
+          <el-input v-model="editingTrip.title" />
+        </el-form-item>
+        <el-form-item label="目的地">
+          <el-input v-model="editingTrip.destination" />
+        </el-form-item>
+        <el-form-item label="预算">
+          <el-input-number v-model="editingTrip.budget" :min="0" :precision="2" />
+        </el-form-item>
+        <el-form-item label="同行人数">
+          <el-input-number v-model="editingTrip.travelers_count" :min="1" />
+        </el-form-item>
+        <el-form-item label="天数">
+          <el-input-number v-model="editingTrip.days" :min="1" />
+        </el-form-item>
+        <!-- 添加计划内容编辑 -->
+        <el-form-item label="行程计划">
+          <el-input 
+            v-model="editingTrip.plan" 
+            type="textarea" 
+            :rows="20"
+            placeholder="请输入详细的行程计划内容"
+            style="width: 100%;"
+          />
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <el-button @click="showTripEditDialog = false">取消</el-button>
+        <el-button type="primary" @click="updateTrip">保存</el-button>
+      </template>
+    </el-dialog>
+    
     <!-- 偏好管理对话框 -->
     <el-dialog 
       v-model="showPreferenceManager" 
@@ -141,7 +255,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores'
 import { useUserPreferenceStore } from '@/stores'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import UserPreferenceManager from '@/components/UserPreferenceManager.vue'
 import UserPreferenceCreator from '@/components/UserPreferenceCreator.vue'
 
@@ -152,48 +266,145 @@ const preferenceStore = useUserPreferenceStore()
 // 状态管理
 const showPreferenceManager = ref(false)
 const showPreferenceCreator = ref(false)
+const showTripEditDialog = ref(false)
+const trips = ref([])
+const tripsLoading = ref(false)
+const tripsError = ref('')
+const editingTrip = ref(null)
 
 // 生命周期
 onMounted(async () => {
   await loadUserPreferences()
+  await loadTrips()
 })
 
 // 方法
-const loadUserPreferences = async () => {
+const loadTrips = async () => {
+  tripsLoading.value = true
+  tripsError.value = ''
   try {
-    console.log('🚀 开始加载偏好数据...')
-    console.log('当前用户ID:', authStore.user?.id)
-    console.log('认证状态:', authStore.isAuthenticated)
-    console.log('Token:', authStore.token ? '存在' : '不存在')
-    
-    await preferenceStore.fetchUserPreferences()
-    console.log('偏好数据加载完成，状态:', {
-      loading: preferenceStore.loading,
-      error: preferenceStore.error,
-      preferencesCount: preferenceStore.preferences.length,
-      preferences: preferenceStore.preferences
+    const response = await fetch('http://localhost:8000/api/v1/trips', {
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json'
+      }
     })
     
-    if (preferenceStore.preferences.length === 0) {
-      console.log('用户没有偏好设置，显示空状态')
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
     }
+    
+    const data = await response.json()
+    trips.value = data
   } catch (error) {
-    console.error('❌ 偏好数据加载失败:', error)
-    // 添加更详细的错误信息
-    if (error.response) {
-      console.error('HTTP错误状态码:', error.response.status)
-      console.error('错误响应数据:', error.response.data)
-      console.error('错误响应头:', error.response.headers)
-    } else if (error.request) {
-      console.error('请求未收到响应，可能是网络问题或后端服务未启动')
-      console.error('请检查:')
-      console.error('1. 后端服务是否运行 (python main.py)')
-      console.error('2. 网络连接是否正常')
-      console.error('3. CORS配置是否正确')
-    } else {
-      console.error('请求配置错误:', error.message)
-    }
+    console.error('加载旅行计划失败:', error)
+    tripsError.value = error.message
+    ElMessage.error('加载旅行计划失败')
+  } finally {
+    tripsLoading.value = false
+  }
+}
+
+const loadUserPreferences = async () => {
+  try {
+    await preferenceStore.fetchUserPreferences()
+  } catch (error) {
+    console.error('偏好数据加载失败:', error)
     ElMessage.error('加载偏好数据失败，请检查网络连接或联系管理员')
+  }
+}
+
+const goToAIPlanning = () => {
+  router.push('/ai-planning')
+}
+
+const editTrip = async (trip) => {
+  try {
+    // 先获取该旅行计划的完整信息（包含plan字段）
+    const response = await fetch(`http://localhost:8000/api/v1/trips/${trip.id}`, {
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const fullTripData = await response.json()
+    editingTrip.value = { ...fullTripData }
+    showTripEditDialog.value = true
+  } catch (error) {
+    console.error('获取旅行计划详情失败:', error)
+    ElMessage.error('获取旅行计划详情失败，使用基本信息编辑')
+    // 如果获取详情失败，使用基本信息进行编辑
+    editingTrip.value = { ...trip }
+    showTripEditDialog.value = true
+  }
+}
+
+const updateTrip = async () => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/v1/trips/${editingTrip.value.id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title: editingTrip.value.title,
+        destination: editingTrip.value.destination,
+        budget: editingTrip.value.budget,
+        travelers_count: editingTrip.value.travelers_count,
+        days: editingTrip.value.days,
+        plan: editingTrip.value.plan // 添加plan字段的更新
+      })
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    ElMessage.success('旅行计划更新成功')
+    showTripEditDialog.value = false
+    await loadTrips()
+  } catch (error) {
+    console.error('更新旅行计划失败:', error)
+    ElMessage.error('更新旅行计划失败')
+  }
+}
+
+const deleteTrip = async (trip) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除旅行计划"${trip.title}"吗？此操作不可恢复。`,
+      '确认删除',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    
+    const response = await fetch(`http://localhost:8000/api/v1/trips/${trip.id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    ElMessage.success('旅行计划删除成功')
+    await loadTrips()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除旅行计划失败:', error)
+      ElMessage.error('删除旅行计划失败')
+    }
   }
 }
 
@@ -238,7 +449,7 @@ const formatDate = (dateString: string | null) => {
 <style scoped>
 .user-profile {
   padding: 20px;
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -263,6 +474,7 @@ const formatDate = (dateString: string | null) => {
 }
 
 .profile-card,
+.trips-card,
 .preference-card,
 .action-card {
   padding: 20px;
@@ -283,7 +495,6 @@ const formatDate = (dateString: string | null) => {
   display: grid;
   gap: 15px;
 }
-
 .info-item {
   display: flex;
   align-items: center;
@@ -300,69 +511,19 @@ const formatDate = (dateString: string | null) => {
   color: #333;
 }
 
-.current-preference {
-  padding: 15px 0;
-}
-
-.preference-section {
-  margin-bottom: 20px;
-}
-
-.preference-section h4 {
-  color: #333;
-  margin-bottom: 8px;
-  font-size: 14px;
-  font-weight: bold;
-}
-
-.preference-content {
-  color: #666;
-  line-height: 1.6;
-  margin: 0;
-  padding: 10px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  border-left: 4px solid #409EFF;
-}
-
-.preference-meta {
+.trips-list {
   margin-top: 15px;
-  padding-top: 10px;
-  border-top: 1px solid #f0f0f0;
 }
 
-.preference-meta small {
-  color: #909399;
-  margin-right: 15px;
-}
-
-.no-preference {
+.no-trips {
   text-align: center;
   padding: 30px 0;
 }
 
-.empty-text {
-  margin-bottom: 15px;
-  color: #666;
+.current-preference {
+  padding: 15px 0;
 }
 
-.action-buttons {
-  display: flex;
-  justify-content: center;
-}
-
-/* 加载状态样式 */
-.loading-state {
-  padding: 20px;
-}
-
-/* 错误状态样式 */
-.error-state {
-  padding: 20px;
-  text-align: center;
-}
-
-/* 偏好列表样式 */
 .preferences-list {
   display: grid;
   gap: 15px;
@@ -407,5 +568,65 @@ const formatDate = (dateString: string | null) => {
 .preference-field span {
   color: #333;
   flex: 1;
+}
+
+.no-preference {
+  text-align: center;
+  padding: 30px 0;
+}
+
+.empty-text {
+  margin-bottom: 15px;
+  color: #666;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+}
+
+/* 加载状态样式 */
+.loading-state {
+  padding: 20px;
+}
+
+/* 错误状态样式 */
+.error-state {
+  padding: 20px;
+  text-align: center;
+}
+
+.plan-field {
+  display: flex;
+  align-items: center;
+}
+
+.plan-field label {
+  font-weight: bold;
+  color: #606266;
+  min-width: 60px;
+  margin-right: 8px;
+}
+
+.plan-field span {
+  color: #333;
+}
+
+.plan-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.more-plans {
+  text-align: center;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e4e7ed;
+}
+
+.no-plans {
+  text-align: center;
+  padding: 30px 0;
 }
 </style>

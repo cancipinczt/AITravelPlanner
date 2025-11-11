@@ -1,9 +1,8 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from typing import List
-import asyncio
-import threading
 
 from app.core.config import settings
 from app.api.api_v1.api import api_router
@@ -67,26 +66,6 @@ async def test_supabase():
             
     except Exception as e:
         return {"status": "Supabase连接失败", "error": str(e)}
-
-@app.on_event("startup")
-async def startup_event():
-    """应用启动时的优化操作"""
-    print("应用启动中...")
-    
-    # 在后台线程中预加载常用数据
-    async def preload_common_data():
-        try:
-            supabase = get_supabase_client()
-            # 预加载一些常用的小数据表
-            # 例如：配置表、基础数据等
-            print("预加载常用数据...")
-        except Exception as e:
-            print(f"预加载数据失败: {e}")
-    
-    # 启动预加载任务（不阻塞主线程）
-    asyncio.create_task(preload_common_data())
-    
-    print("应用启动完成")
 
 if __name__ == "__main__":
     import uvicorn

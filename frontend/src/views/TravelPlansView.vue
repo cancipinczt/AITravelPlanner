@@ -1,20 +1,83 @@
 <template>
   <div class="travel-plans">
     <div class="page-header">
-      <h2>旅行计划</h2>
-      <p>管理您的旅行计划</p>
+      <h2>旅行计划管理</h2>
+      <p>管理您的所有旅行计划</p>
     </div>
     
     <el-card class="content-card">
-      <el-button type="primary" @click="fetchTravelPlans">获取旅行计划</el-button>
+      <!-- 操作栏 -->
+      <div class="action-bar">
+        <el-button type="primary" @click="fetchTravelPlans" :loading="loading">
+          <el-icon><refresh /></el-icon>
+          刷新列表
+        </el-button>
+        <el-button type="success" @click="goToAIPlanning">
+          <el-icon><plus /></el-icon>
+          创建新计划
+        </el-button>
+      </div>
       
-      <div v-if="travelPlans.length > 0" class="plans-container">
-        <el-card v-for="plan in travelPlans" :key="plan.id" class="plan-card">
-          <h3>{{ plan.destination }}</h3>
-          <p>时长: {{ plan.duration }}</p>
-          <p>预算: ¥{{ plan.budget }}</p>
-          <p>季节: {{ plan.season }}</p>
-        </el-card>
+      <!-- 加载状态 -->
+      <div v-if="loading" class="loading-state">
+        <el-skeleton :rows="5" animated />
+      </div>
+      
+      <!-- 错误状态 -->
+      <div v-else-if="error" class="error-state">
+        <el-alert
+          :title="`加载失败: ${error}`"
+          type="error"
+          show-icon
+          :closable="false"
+        />
+        <el-button type="primary" @click="fetchTravelPlans" style="margin-top: 10px;">
+          重试加载
+        </el-button>
+      </div>
+      
+      <!-- 旅行计划列表 -->
+      <div v-else-if="travelPlans.length > 0" class="plans-container">
+        <el-table :data="travelPlans" style="width: 100%">
+          <el-table-column prop="title" label="计划标题" min-width="200">
+            <template #default="scope">
+              <strong>{{ scope.row.title }}</strong>
+            </template>
+          </el-table-column>
+          
+          <el-table-column prop="destination" label="目的地" width="120">
+            <template #default="scope">
+              <el-tag type="primary">{{ scope.row.destination }}</el-tag>
+            </template>
+          </el-table-column>
+          
+          <el-table-column prop="days" label="天数" width="80" align="center">
+            <template #default="scope">
+              <span>{{ scope.row.days }}天</span>
+            </template>
+          </el-table-column>
+          
+          <el-table-column prop="travelers_count" label="人数" width="80" align="center">
+            <template #default="scope">
+              <span>{{ scope.row.travelers_count }}人</span>
+            </template>
+          </el-table-column>
+          
+          <el-table-column prop="budget" label="预算" width="120" align="right">
+            <template #default="scope">
+              <span v-if="scope.row.budget" class="budget-amount">
+                ¥{{ scope.row.budget }}
+              </span>
+              <span v-else class="no-budget">未设置</span>
+            </template>
+          </el-table-column>
+          
+          <el-table-column prop="preference_name" label="偏好" width="120">
+            <template #default="scope">
+              <span>{{ scope.row.preference_name }}</span>
+            </template>
+          </el-table-column>
+        </el-table>
       </div>
       
       <div v-else class="empty-state">

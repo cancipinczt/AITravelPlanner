@@ -3,18 +3,27 @@ from typing import List, Optional
 from uuid import UUID
 from app.core.supabase_client import get_supabase_client
 from app.core.auth import get_current_user
-from app.schemas.trip import (
-    TripCreate, TripResponse, TripUpdate, 
-    ItineraryCreate, ItineraryResponse,
-    ExpenseCreate, ExpenseResponse,
-    POIRecommendationResponse
-)
-# 更新导入：使用新的AI模型定义
-from app.schemas.ai import AIPlanRequest, AIPlanResponse
+from app.schemas.trip import TripCreate, TripResponse, TripUpdate, ExpenseCreate, ExpenseResponse, TripBriefResponse
+from decimal import Decimal
 
 router = APIRouter()
 
-# 旅行计划API - 按照需求文档4.1.3规范
+# 辅助函数：处理Decimal和UUID类型的序列化
+def serialize_fields(data_dict):
+    """将字典中的Decimal和UUID字段转换为JSON可序列化的类型"""
+    serialized = {}
+    for key, value in data_dict.items():
+        if isinstance(value, Decimal):
+            # 将Decimal转换为float
+            serialized[key] = float(value)
+        elif isinstance(value, UUID):
+            # 将UUID转换为字符串
+            serialized[key] = str(value)
+        else:
+            serialized[key] = value
+    return serialized
+
+# 旅行计划API - 按照简化后的表结构
 
 @router.post("/trips", response_model=TripResponse, status_code=status.HTTP_201_CREATED)
 async def create_trip(
@@ -23,16 +32,12 @@ async def create_trip(
     current_user = Depends(get_current_user)
 ):
     """创建旅行计划"""
-    # 验证日期逻辑
-    if trip_data.start_date >= trip_data.end_date:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="结束日期必须晚于开始日期"
-        )
-    
     # 创建旅行计划 - 使用Supabase插入数据
     trip_dict = trip_data.dict()
-    trip_dict['user_id'] = str(current_user.id)
+    trip_dict['user_id'] = str(current_user['id'])
+    
+    # 序列化字段（处理Decimal和UUID）
+    trip_dict = serialize_fields(trip_dict)
     
     response = supabase.table('trips').insert(trip_dict).execute()
     
@@ -44,17 +49,40 @@ async def create_trip(
             detail="创建旅行计划失败"
         )
 
-@router.get("/trips", response_model=List[TripResponse])
+@router.get("/trips", response_model=List[TripBriefResponse])
 async def get_trips(
     skip: int = 0,
     limit: int = 100,
     supabase = Depends(get_supabase_client),
     current_user = Depends(get_current_user)
 ):
-    """获取用户的所有旅行计划"""
-    response = supabase.table('trips').select('*').eq('user_id', str(current_user.id)).range(skip, skip + limit - 1).execute()
+    """获取用户的所有旅行计划（简要信息）"""
+    # 获取旅行计划数据，同时关联用户偏好表获取偏好名称
+    response = supabase.table('trips').select(
+        'id, title, destination, budget, travelers_count, days, preference_id, created_at'
+    ).eq('user_id', str(current_user['id'])).range(skip, skip + limit - 1).execute()
     
-    return response.data if response.data else []
+    if not response.data:
+        return []
+    
+    # 处理每个旅行计划，获取偏好名称
+    trips_with_preference_names = []
+    for trip in response.data:
+        trip_with_preference = dict(trip)
+        
+        # 如果有preference_id，获取偏好名称
+        if trip.get('preference_id'):
+            pref_response = supabase.table('user_preferences').select('name').eq('id', str(trip['preference_id'])).execute()
+            if pref_response.data:
+                trip_with_preference['preference_name'] = pref_response.data[0]['name']
+            else:
+                trip_with_preference['preference_name'] = None
+        else:
+            trip_with_preference['preference_name'] = None
+        
+        trips_with_preference_names.append(trip_with_preference)
+    
+    return trips_with_preference_names
 
 @router.get("/trips/{trip_id}", response_model=TripResponse)
 async def get_trip(
@@ -63,7 +91,7 @@ async def get_trip(
     current_user = Depends(get_current_user)
 ):
     """获取特定旅行计划详情"""
-    response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user.id)).execute()
+    response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user['id'])).execute()
     
     if not response.data:
         raise HTTPException(
@@ -82,7 +110,7 @@ async def update_trip(
 ):
     """更新旅行计划"""
     # 先验证旅行计划存在且属于当前用户
-    check_response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user.id)).execute()
+    check_response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user['id'])).execute()
     
     if not check_response.data:
         raise HTTPException(
@@ -92,6 +120,10 @@ async def update_trip(
     
     # 更新字段
     update_data = trip_data.dict(exclude_unset=True)
+    
+    # 序列化字段（处理Decimal和UUID）
+    update_data = serialize_fields(update_data)
+    
     response = supabase.table('trips').update(update_data).eq('id', str(trip_id)).execute()
     
     if response.data:
@@ -110,7 +142,7 @@ async def delete_trip(
 ):
     """删除旅行计划"""
     # 先验证旅行计划存在且属于当前用户
-    check_response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user.id)).execute()
+    check_response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user['id'])).execute()
     
     if not check_response.data:
         raise HTTPException(
@@ -129,56 +161,7 @@ async def delete_trip(
     
     return None
 
-@router.post("/trips/{trip_id}/generate", response_model=AIPlanResponse)
-async def generate_itinerary(
-    trip_id: UUID,
-    ai_request: AIPlanRequest,
-    supabase = Depends(get_supabase_client),
-    current_user = Depends(get_current_user)
-):
-    """AI生成行程 - 基于现有旅行计划生成AI行程"""
-    # 验证旅行计划存在且属于当前用户
-    response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user.id)).execute()
-    
-    if not response.data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="旅行计划不存在"
-        )
-    
-    # TODO: 集成阿里云百炼AI服务
-    # 这里先返回模拟数据
-    return AIPlanResponse(
-        itinerary="基于现有旅行计划的AI生成行程（待实现）",
-        budget_usage={},
-        recommendations=[],
-        weather_info={},
-        status="success"
-    )
-
-@router.get("/trips/{trip_id}/itinerary", response_model=List[ItineraryResponse])
-async def get_itinerary(
-    trip_id: UUID,
-    supabase = Depends(get_supabase_client),
-    current_user = Depends(get_current_user)
-):
-    """获取行程详情"""
-    # 验证旅行计划权限
-    trip_response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user.id)).execute()
-    
-    if not trip_response.data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="旅行计划不存在"
-        )
-    
-    # 获取行程详情
-    response = supabase.table('trip_itineraries').select('*').eq('trip_id', str(trip_id)).execute()
-    
-    return response.data if response.data else []
-
-# 费用管理API - 按照需求文档4.1.4规范
-
+# 费用管理API - 保持不变
 @router.post("/trips/{trip_id}/expenses", response_model=ExpenseResponse, status_code=status.HTTP_201_CREATED)
 async def create_expense(
     trip_id: UUID,
@@ -188,7 +171,7 @@ async def create_expense(
 ):
     """添加费用记录"""
     # 验证旅行计划权限
-    trip_response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user.id)).execute()
+    trip_response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user['id'])).execute()
     
     if not trip_response.data:
         raise HTTPException(
@@ -199,6 +182,9 @@ async def create_expense(
     # 创建费用记录
     expense_dict = expense_data.dict()
     expense_dict['trip_id'] = str(trip_id)
+    
+    # 序列化字段（处理Decimal和UUID）
+    expense_dict = serialize_fields(expense_dict)
     
     response = supabase.table('expenses').insert(expense_dict).execute()
     
@@ -218,7 +204,7 @@ async def get_expenses(
 ):
     """获取费用列表"""
     # 验证旅行计划权限
-    trip_response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user.id)).execute()
+    trip_response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user['id'])).execute()
     
     if not trip_response.data:
         raise HTTPException(
@@ -238,7 +224,7 @@ async def get_budget_analysis(
 ):
     """预算分析报告"""
     # 验证旅行计划权限
-    trip_response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user.id)).execute()
+    trip_response = supabase.table('trips').select('*').eq('id', str(trip_id)).eq('user_id', str(current_user['id'])).execute()
     
     if not trip_response.data:
         raise HTTPException(
