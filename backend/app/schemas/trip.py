@@ -85,24 +85,6 @@ class ItineraryResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# 删除以下AI模型定义，因为它们已迁移到ai.py文件中
-# AI规划请求
-# class AIPlanRequest(BaseModel):
-#     destination: str
-#     start_date: date
-#     end_date: date
-#     budget: Decimal
-#     travelers_count: int
-#     preferences: Optional[Dict[str, Any]] = None
-#     special_requirements: Optional[str] = None
-
-# AI规划响应
-# class AIPlanResponse(BaseModel):
-#     itinerary: List[ItineraryResponse]
-#     total_cost_estimate: Decimal
-#     recommendations: List[Dict[str, Any]]
-#     weather_info: Optional[Dict[str, Any]] = None
-
 # 费用记录
 class ExpenseCreate(BaseModel):
     category: str
