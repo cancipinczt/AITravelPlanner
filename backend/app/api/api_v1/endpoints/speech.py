@@ -11,50 +11,6 @@ import io
 
 router = APIRouter()
 
-@router.post("/recognize", response_model=SpeechRecognitionResponse)
-async def recognize_speech(
-    audio_file: UploadFile = File(...),
-    language: str = "zh_cn",
-    current_user: dict = Depends(get_current_user)
-):
-    """
-    语音转文本接口
-    - 接收音频文件，返回识别结果
-    - 支持多种音频格式
-    """
-    # 验证文件类型
-    if not audio_file.content_type.startswith('audio/'):
-        raise HTTPException(
-            status_code=400, 
-            detail="请上传音频文件"
-        )
-    
-    try:
-        # 读取音频文件内容
-        audio_data = await audio_file.read()
-        
-        # 调用科大讯飞语音识别
-        result = await speech_client.recognize_speech(audio_data, language)
-        
-        if not result["success"]:
-            raise HTTPException(
-                status_code=500, 
-                detail=result["error"]
-            )
-        
-        return SpeechRecognitionResponse(
-            success=True,
-            transcript=result["transcript"],
-            confidence=result["confidence"],
-            language=language
-        )
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, 
-            detail=f"语音识别处理失败: {str(e)}"
-        )
-
 @router.websocket("/transcribe")
 async def transcribe_realtime(websocket: WebSocket):
     """

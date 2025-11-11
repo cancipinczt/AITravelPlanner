@@ -11,13 +11,45 @@
         <h3>输入旅行需求</h3>
         <el-form :model="planForm" label-width="100px">
           <el-form-item label="旅行需求" required>
-            <el-input 
-              v-model="planForm.travelRequirements" 
-              type="textarea"
-              :rows="3"
-              placeholder="请输入旅行的目的地、天数、预算、同行人数，例如：日本东京，7天，预算15000元，2人同行"
-              :autosize="{ minRows: 3, maxRows: 6 }"
-            />
+            <div class="travel-requirements-input">
+              <el-input 
+                v-model="planForm.travelRequirements" 
+                type="textarea"
+                :rows="3"
+                placeholder="请输入旅行的目的地、天数、预算、同行人数，例如：日本东京，7天，预算15000元，2人同行"
+                :autosize="{ minRows: 3, maxRows: 6 }"
+              />
+              <!-- 语音输入按钮 -->
+              <div class="voice-input-container">
+                <el-button 
+                  v-if="!isRecording" 
+                  type="primary" 
+                  circle 
+                  size="small"
+                  @click="startVoiceInput"
+                  :disabled="isWebSocketConnected"
+                  class="voice-btn"
+                >
+                  <el-icon><microphone /></el-icon>
+                </el-button>
+                
+                <el-button 
+                  v-else 
+                  type="danger" 
+                  circle 
+                  size="small"
+                  @click="stopVoiceInput"
+                  class="voice-btn"
+                >
+                  <el-icon><video-pause /></el-icon>
+                </el-button>
+                
+                <div v-if="isRecording" class="recording-status">
+                  <span class="recording-dot"></span>
+                  <span>正在录音...</span>
+                </div>
+              </div>
+            </div>
           </el-form-item>
           
           <!-- 添加间距分隔符 -->
@@ -129,7 +161,7 @@
                 </el-descriptions-item>
               </el-descriptions>
             </div>
-          </el-card>
+</el-card>
           
           <!-- 推荐信息 -->
           <el-card v-if="planResult.recommendations && planResult.recommendations.length > 0" class="plan-section">
@@ -203,7 +235,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { useAuthStore } from '@/stores'
@@ -211,6 +243,7 @@ import { useUserPreferenceStore } from '@/stores'
 import { ElMessage } from 'element-plus'
 import MarkdownIt from 'markdown-it'
 import UserPreferenceManager from '@/components/UserPreferenceManager.vue'
+import { Microphone, VideoPause, InfoFilled } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -241,6 +274,14 @@ const planResult = ref<any>(null)
 const showPreferenceDialog = ref(false)
 const selectedPreferenceId = ref('')
 
+// 语音输入相关状态
+const isRecording = ref(false)
+const isWebSocketConnected = ref(false)
+const websocket = ref<WebSocket | null>(null)
+const mediaStream = ref<MediaStream | null>(null)
+const audioContext = ref<AudioContext | null>(null)
+const audioProcessor = ref<ScriptProcessorNode | null>(null)
+
 // 计算属性
 const userPreferences = computed(() => {
   return preferenceStore.preferences
@@ -256,6 +297,11 @@ onMounted(async () => {
   await loadUserPreferences()
 })
 
+onUnmounted(() => {
+  // 清理语音输入资源
+  stopVoiceInput()
+})
+
 // 方法
 const loadUserPreferences = async () => {
   try {
@@ -265,6 +311,135 @@ const loadUserPreferences = async () => {
     console.error('偏好数据加载失败:', error)
     ElMessage.error('加载偏好数据失败，请检查网络连接')
   }
+}
+
+// 语音输入功能
+const startVoiceInput = async () => {
+  try {
+    // 获取麦克风权限
+    mediaStream.value = await navigator.mediaDevices.getUserMedia({ 
+      audio: {
+        sampleRate: 16000,        // 16kHz采样率
+        channelCount: 1,          // 单声道
+        echoCancellation: true,   // 回声消除
+        noiseSuppression: true    // 降噪
+      } 
+    })
+
+    // 创建音频上下文
+    audioContext.value = new AudioContext({ sampleRate: 16000 })
+    
+    // 创建音频源
+    const source = audioContext.value.createMediaStreamSource(mediaStream.value)
+    
+    // 创建音频处理器（每32ms处理一次，512 samples at 16kHz）
+    audioProcessor.value = audioContext.value.createScriptProcessor(512, 1, 1)
+    
+    // 设置音频处理回调
+    audioProcessor.value.onaudioprocess = (event) => {
+      if (websocket.value && websocket.value.readyState === WebSocket.OPEN) {
+        // 获取音频数据
+        const inputData = event.inputBuffer.getChannelData(0)
+        
+        // 转换为16位PCM格式
+        const pcmData = float32ToPCM(inputData)
+        
+        // 发送音频数据
+        websocket.value.send(pcmData)
+      }
+    }
+
+    // 连接音频处理链
+    source.connect(audioProcessor.value)
+    audioProcessor.value.connect(audioContext.value.destination)
+    
+    // 创建WebSocket连接
+    websocket.value = new WebSocket('ws://localhost:8000/api/v1/speech/transcribe')
+    
+    websocket.value.onopen = () => {
+      isWebSocketConnected.value = true
+      isRecording.value = true
+      ElMessage.success('语音输入已开始，请开始说话...')
+    }
+    
+    websocket.value.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        
+        if (data.success && data.transcript) {
+          // 将转录结果添加到输入框中
+          planForm.travelRequirements = data.transcript
+          
+          if (data.is_final) {
+            ElMessage.success('语音输入完成')
+          }
+        } else if (!data.success) {
+          ElMessage.error(`语音识别错误: ${data.error}`)
+        }
+      } catch (error) {
+        console.error('解析WebSocket消息失败:', error)
+      }
+    }
+    
+    websocket.value.onerror = (error) => {
+      console.error('WebSocket连接错误:', error)
+      ElMessage.error('语音输入连接失败，请检查网络连接')
+      stopVoiceInput()
+    }
+    
+    websocket.value.onclose = () => {
+      console.log('WebSocket连接关闭')
+      isWebSocketConnected.value = false
+      isRecording.value = false
+    }
+    
+  } catch (error) {
+    console.error('启动语音输入失败:', error)
+    ElMessage.error('无法访问麦克风，请检查权限设置')
+    stopVoiceInput()
+  }
+}
+
+const stopVoiceInput = () => {
+  // 关闭WebSocket连接
+  if (websocket.value) {
+    websocket.value.close()
+    websocket.value = null
+  }
+  
+  // 停止音频处理
+  if (audioProcessor.value) {
+    audioProcessor.value.disconnect()
+    audioProcessor.value = null
+  }
+  
+  // 关闭音频上下文
+  if (audioContext.value) {
+    audioContext.value.close()
+    audioContext.value = null
+  }
+  
+  // 停止媒体流
+  if (mediaStream.value) {
+    mediaStream.value.getTracks().forEach(track => track.stop())
+    mediaStream.value = null
+  }
+  
+  isRecording.value = false
+  isWebSocketConnected.value = false
+}
+
+// 将Float32音频数据转换为16位PCM格式
+const float32ToPCM = (input: Float32Array): ArrayBuffer => {
+  const buffer = new ArrayBuffer(input.length * 2)
+  const view = new DataView(buffer)
+  
+  for (let i = 0; i < input.length; i++) {
+    const s = Math.max(-1, Math.min(1, input[i]))
+    view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true)
+  }
+  
+  return buffer
 }
 
 const handlePreferenceChange = (preferenceId: string) => {
@@ -348,7 +523,6 @@ const parseTravelRequirements = (text: string) => {
   
   return result
 }
-
 // 生成旅行计划
 const generatePlan = async () => {
   // 解析用户输入的旅行需求
@@ -610,6 +784,134 @@ const getTagType = (type: string) => {
   font-size: 85%;
   background-color: rgba(175, 184, 193, 0.2);
   border-radius: 6px;
+}
+
+.markdown-body pre {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.markdown-body pre code {
+  background: none;
+  padding: 0;
+}
+
+/* 语音输入样式 */
+.travel-requirements-input {
+  position: relative;
+}
+
+.voice-input-container {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voice-btn {
+  width: 32px;
+  height: 32px;
+}
+
+.recording-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #f56c6c;
+}
+
+.recording-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #f56c6c;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* 确保输入框有足够的右边距给语音按钮 */
+:deep(.el-textarea__inner) {
+  padding-right: 50px;
+  width: calc(100% - 20px); /* 距离父组件右边缘20px */
+  margin-right: 20px; /* 添加右边距 */
+}
+
+/* 语音输入样式 */
+.travel-requirements-input {
+  position: relative;
+  width: 100%; /* 确保容器宽度为100% */
+}
+
+.voice-input-container {
+  position: absolute;
+  right: 30px; /* 调整位置，考虑右边距 */
+  top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10; /* 确保按钮在输入框上方 */
+}
+
+.voice-btn {
+  width: 32px;
+  height: 32px;
+}
+
+.recording-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #f56c6c;
+}
+
+.recording-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #f56c6c;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* 调整el-form-item的宽度 */
+:deep(.el-form-item__content) {
+  width: 100%;
+}
+
+/* 确保输入框容器宽度正确 */
+:deep(.el-textarea) {
+  width: 100%;
 }
 
 .markdown-body pre {
