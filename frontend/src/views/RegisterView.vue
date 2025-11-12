@@ -32,21 +32,22 @@
           />
         </el-form-item>
         <el-form-item>
-          <el-button 
-            type="primary" 
-            @click="handleRegister" 
-            :loading="loading"
-            style="width: 100%;"
-          >
-            {{ loading ? '注册中...' : '注册' }}
-          </el-button>
-          <el-button 
-            @click="$router.push('/login')" 
-            :disabled="loading"
-            style="width: 100%; margin-top: 10px;"
-          >
-            返回登录
-          </el-button>
+          <div class="button-container">
+            <el-button 
+              type="primary" 
+              :loading="loading" 
+              @click="handleRegister"
+              class="register-button"
+            >
+              注册
+            </el-button>
+            <el-button 
+              @click="goToLogin"
+              class="back-button"
+            >
+              返回登录
+            </el-button>
+          </div>
         </el-form-item>
       </el-form>
       
@@ -150,6 +151,11 @@ watch([() => registerForm.username, () => registerForm.password, () => registerF
     clearError()
   }
 })
+
+// 添加返回登录函数
+const goToLogin = () => {
+  router.push('/login')
+}
 </script>
 
 <style scoped>
@@ -229,21 +235,55 @@ watch([() => registerForm.username, () => registerForm.password, () => registerF
 .button-container {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 16px;
   margin-top: 8px;
+  width: 100%;
 }
 
 .register-button {
   height: 48px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
   font-size: 16px;
   font-weight: 600;
-  box-shadow: 0 4px 16px rgba(82, 196, 26, 0.3);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
   transition: all 0.3s ease;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+.back-button {
+  height: 48px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  color: #667eea;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.register-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.back-button:hover {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: #667eea;
+  transform: translateY(-1px);
+}
+
+/* 删除错误的 .login-button 样式 */
 .register-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(82, 196, 26, 0.4);

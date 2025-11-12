@@ -178,7 +178,7 @@ size="small"
         <div class="action-buttons">
           <el-button type="danger" @click="handleLogout">退出登录</el-button>
         </div>
-      </el-card>
+</el-card>
     </div>
     
     <!-- 编辑旅行计划对话框 -->
@@ -382,7 +382,7 @@ const deleteTrip = async (trip) => {
       '确认删除',
       {
         confirmButtonText: '确定',
-        cancelButtonText: '取消',
+cancelButtonText: '取消',
         type: 'warning',
       }
     )
@@ -478,6 +478,7 @@ const formatDate = (dateString: string | null) => {
   font-size: 18px;
   opacity: 0.9;
   font-weight: 500;
+  color: white; /* 添加白色文字颜色 */
 }
 
 .profile-card {
@@ -681,8 +682,9 @@ const formatDate = (dateString: string | null) => {
 }
 
 .page-header p {
-  color: #666;
-  margin: 0;
+  font-size: 18px;
+  opacity: 0.9;
+  font-weight: 500;
 }
 
 .profile-content {

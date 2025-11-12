@@ -173,7 +173,6 @@
             >
               💾 保存为旅行计划
             </el-button>
-            <p class="create-trip-hint">将此计划保存到您的旅行计划列表中</p>
           </div>
       
           <!-- 行程安排 -->
@@ -518,8 +517,7 @@ audioProcessor.value.disconnect()
     mediaStream.value.getTracks().forEach(track => track.stop())
     mediaStream.value = null
   }
-  
-  // 最后关闭WebSocket连接
+// 最后关闭WebSocket连接
   if (websocket.value) {
     if (websocket.value.readyState === WebSocket.OPEN) {
       // 发送结束标记给后端
@@ -815,9 +813,42 @@ const getTagType = (type: string) => {
 .preference-details {
   margin-top: 16px;
   padding: 16px;
-  background: rgba(102, 126, 234, 0.05);
-  border-radius: 12px;
-  border-left: 4px solid #667eea;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.preference-details h4 {
+  margin: 0 0 12px 0;
+  color: #495057;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.preference-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preference-field {
+  display: flex;
+  align-items: flex-start;
+}
+
+.preference-field label {
+  font-weight: 600;
+  color: #6c757d;
+  min-width: 80px;
+  margin-right: 8px;
+  font-size: 13px;
+}
+
+.preference-field span {
+  color: #495057;
+  font-size: 13px;
+  line-height: 1.4;
+  flex: 1;
 }
 
 .preference-info h4 {

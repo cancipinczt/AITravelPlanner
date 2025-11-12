@@ -25,18 +25,17 @@
           <div class="button-container">
             <el-button 
               type="primary" 
-              @click="handleLogin" 
-              :loading="loading"
+              :loading="loading" 
+              @click="handleLogin"
               class="login-button"
             >
-              {{ loading ? '登录中...' : '登录' }}
+              登录
             </el-button>
             <el-button 
-              @click="$router.push('/register')" 
-              :disabled="loading"
+              @click="goToRegister"
               class="register-button"
             >
-              注册新账号
+              注册
             </el-button>
           </div>
         </el-form-item>
@@ -128,6 +127,11 @@ watch([() => loginForm.username, () => loginForm.password], () => {
     clearError()
   }
 })
+
+// 确保有跳转到注册页面的函数
+const goToRegister = () => {
+  router.push('/register')
+}
 </script>
 
 <style scoped>
@@ -207,8 +211,11 @@ watch([() => loginForm.username, () => loginForm.password], () => {
 .button-container {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 16px;
   margin-top: 8px;
+  width: 100%;
 }
 
 .login-button {
@@ -220,11 +227,10 @@ watch([() => loginForm.username, () => loginForm.password], () => {
   font-weight: 600;
   box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
   transition: all 0.3s ease;
-}
-
-.login-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .register-button {
@@ -236,6 +242,15 @@ watch([() => loginForm.username, () => loginForm.password], () => {
   font-size: 16px;
   font-weight: 600;
   transition: all 0.3s ease;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
 .register-button:hover {
