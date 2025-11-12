@@ -1,7 +1,7 @@
 <template>
   <div class="ai-planning">
     <div class="page-header">
-      <h2>智能行程规划</h2>
+      <h2>智能旅行规划</h2>
       <p>AI为您生成个性化旅行路线</p>
     </div>
     

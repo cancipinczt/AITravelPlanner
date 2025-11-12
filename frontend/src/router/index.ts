@@ -1,12 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import UserProfileView from '../views/UserProfileView.vue'
 import AIPlanningView from '../views/AIPlanningView.vue'
-import TravelPlansView from '../views/TravelPlansView.vue'
 import MapDemoView from '../views/MapDemoView.vue'
-import MapApiTestView from '../views/MapApiTestView.vue'
 import ExpenseManagementView from '../views/ExpenseManagementView.vue'
 import TripExpensesView from '../views/TripExpensesView.vue'
 import { useAuthStore } from '@/stores'
@@ -17,7 +14,8 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: HomeView
+      component: AIPlanningView,
+      meta: { requiresAuth: true }
     },
     {
       path: '/login',
@@ -42,21 +40,9 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/travel-plans',
-      name: 'travel-plans',
-      component: TravelPlansView,
-      meta: { requiresAuth: true }
-    },
-    {
       path: '/map-demo',
       name: 'map-demo',
       component: MapDemoView,
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/map-api-test',
-      name: 'map-api-test',
-      component: MapApiTestView,
       meta: { requiresAuth: true }
     },
     {
