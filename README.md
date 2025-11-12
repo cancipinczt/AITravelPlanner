@@ -28,10 +28,14 @@ AI4SE homework3
 
 ## 快速部署
 
-### 使用Docker Compose部署
+### 使用Docker Compose部署（推荐）
 
 ```bash
 # 下载docker-compose.prod.yml文件
+# Windows PowerShell:
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/cancipinczt/AITravelPlanner/main/docker-compose.prod.yml" -OutFile "docker-compose.prod.yml"
+
+# Linux/macOS:
 wget https://raw.githubusercontent.com/cancipinczt/AITravelPlanner/main/docker-compose.prod.yml
 
 # 启动服务
