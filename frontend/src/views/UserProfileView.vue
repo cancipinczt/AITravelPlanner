@@ -474,13 +474,6 @@ const formatDate = (dateString: string | null) => {
   background-clip: text;
 }
 
-.page-header p {
-  font-size: 18px;
-  opacity: 0.9;
-  font-weight: 500;
-  color: white; /* 添加白色文字颜色 */
-}
-
 .profile-card {
   border-radius: 16px;
   border: none;
