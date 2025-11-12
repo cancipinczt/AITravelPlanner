@@ -3,13 +3,23 @@
  * 使用Vite的环境变量语法正确加载API密钥和安全密钥
  */
 
-// 从环境变量获取配置
-const API_KEY = import.meta.env.VITE_MAP_API_KEY;
-const SECURITY_CODE = import.meta.env.VITE_MAP_SECURITY_CODE;
+// 从环境变量获取配置（支持运行时和构建时）
+const getEnvVar = (key: string): string => {
+  // 优先使用运行时环境变量（适用于Docker生产环境）
+  if (typeof window !== 'undefined' && window.env && window.env[key]) {
+    return window.env[key];
+  }
+  // 回退到构建时环境变量（适用于开发环境）
+  return import.meta.env[key] || '';
+};
+
+const API_KEY = getEnvVar('VITE_MAP_API_KEY');
+const SECURITY_CODE = getEnvVar('VITE_MAP_SECURITY_CODE');
 
 console.log('🔧 高德地图配置检查:');
 console.log('- API密钥:', API_KEY ? '已配置' : '未配置');
-console.log('- 安全密钥:', SECURITY_CODE ? '已配置' : '未配置');
+console.log('- 安全密钥:', SECURITY_CODE ? '未配置' : '未配置');
+console.log('- 环境变量来源:', typeof window !== 'undefined' && window.env ? '运行时' : '构建时');
 
 // 全局加载状态
 let isAMapLoaded = false;
