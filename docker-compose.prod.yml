@@ -15,50 +15,37 @@ services:
       - frontend
     restart: unless-stopped
 
-  # 后端服务（生产环境）
+  # 后端服务
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: crpi-0sn6zoxl9nv63fam.cn-hangzhou.personal.cr.aliyuncs.com/$ACR_NAMESPACE/aitravelplanner-backend:latest
+    ports:
+      - "8000:8000"  # 宿主机8000端口映射到容器8000端口
+    # 设置后端环境变量（使用服务名进行容器间通信）
     environment:
-      - FRONTEND_URL=${FRONTEND_URL}  # 新增这个！
-      - DATABASE_URL=${DATABASE_URL}
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_KEY=${SUPABASE_KEY}
-      - ALIYUN_AI_KEY=${ALIYUN_AI_KEY}
-      # - ALIYUN_OSS_KEY=${ALIYUN_OSS_KEY}
-      - REDIS_URL=${REDIS_URL}  # 改为环境变量
+      - API_BASE_URL=http://backend:8000  # 使用服务名backend
+      - FRONTEND_URL=http://frontend:80    # 使用服务名frontend
+      # 安全配置
+      - SECRET_KEY=d1d19a4e38a554b3f735a2ef7180d5bf
+      - JWT_SECRET=6692e44e08f3db919517989fbddd9282
+      # 使用你提供的API密钥
+      - ALIYUN_AI_KEY=sk-9dacce561ea94d159b59e25ceb69ad58
+      - SUPABASE_URL=https://pimnzgkulraxbcklzzge.supabase.co
+      - SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpbW56Z2t1bHJheGJja2x6emdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2MTk5ODQsImV4cCI6MjA3NzE5NTk4NH0.jeEgVe5gujP5uaXxOZM35399isFpCWUrggBt3goe8GA
+      - MAP_API_KEY=4b4316ce453844520b18dc01cb699b5e
+      - SPEECH_API_KEY=394c59d3e8063d9d35968165fe814cfe
+      - SPEECH_APP_ID=7d06907f
     restart: unless-stopped
 
-  # 前端服务（生产环境）
+  # 前端服务
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: crpi-0sn6zoxl9nv63fam.cn-hangzhou.personal.cr.aliyuncs.com/$ACR_NAMESPACE/aitravelplanner-frontend:latest
+    ports:
+      - "3000:80"  # 宿主机3000端口映射到容器80端口
+    # 设置前端环境变量
     environment:
-      - VITE_API_BASE_URL=${API_BASE_URL}
-      - VITE_MAP_API_KEY=${MAP_API_KEY}
-      - VITE_SPEECH_API_KEY=${SPEECH_API_KEY}
+      - VITE_API_BASE_URL=http://backend:8000/api/v1  # 前端访问后端使用服务名backend
+      - VITE_MAP_API_KEY=9295de95eb57c1a6e73d0e9a10058771
+      - VITE_MAP_SECURITY_CODE=8ec3794ae8a2dfdd6d4c4ef3fc4d8189
+    depends_on:
+      - backend
     restart: unless-stopped
-
-  # 数据库（生产环境）
-  db:
-    image: postgres:15
-    environment:
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-
-  # Redis缓存（生产环境）
-  redis:
-    image: redis:7-alpine
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-
-volumes:
-  postgres_data:
-  redis_data:

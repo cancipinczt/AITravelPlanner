@@ -30,10 +30,7 @@ class Settings(BaseSettings):
 
     # 前端URL配置
     FRONTEND_URL: str
-    
-    # Redis配置
-    REDIS_URL: str
-    
+        
     class Config:
         case_sensitive = True
         # 使用绝对路径确保可靠性

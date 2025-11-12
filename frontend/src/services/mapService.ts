@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 
-const API_BASE_URL = 'http://localhost:8000/api/v1'
+// 使用环境变量配置API基础URL，支持生产环境容器间通信
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
 
 // 地址解析（地理编码）
 export const geocodeAddress = async (address: string, city?: string) => {

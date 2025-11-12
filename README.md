@@ -22,7 +22,6 @@ AI4SE homework3
 - **认证**: Supabase Auth
 - **AI服务**: 阿里云百炼平台
 - **文件存储**: 阿里云OSS
-- **缓存**: Redis
 
 ### 部署
 
