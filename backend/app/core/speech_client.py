@@ -47,6 +47,7 @@ class IFlyTekSpeechClient:
         try:
             # 解析JSON数据
             result_data = json.loads(data)
+            print(f"原始API响应: {data}")  # 添加调试日志
             
             # 提取文本内容
             text_parts = []
@@ -75,9 +76,12 @@ class IFlyTekSpeechClient:
             
             # 合并文本并返回
             if text_parts:
-                return "".join(text_parts)
+                extracted_text = "".join(text_parts)
+                print(f"提取的文本: '{extracted_text}'")  # 添加调试日志
+                return extracted_text
             else:
                 # 如果没有提取到文本，返回原始数据用于调试
+                print("未提取到文本，返回原始数据")  # 添加调试日志
                 return data
                 
         except Exception as e:
@@ -86,17 +90,18 @@ class IFlyTekSpeechClient:
             return data
 
     async def transcribe_realtime(self, audio_stream: AsyncGenerator[bytes, None]) -> AsyncGenerator[Dict[str, Any], None]:
-        """实时语音转写 - 优化为真正的实时处理"""
+        """实时语音转写 - 优化连接管理和错误处理"""
         try:
             # 生成鉴权URL
             auth_url = self._generate_auth_url()
             print(f"连接科大讯飞API: {auth_url}")
             
-            # 设置更长的超时时间
+            # 设置更长的超时时间和ping间隔
             async with websockets.connect(
                 auth_url, 
                 ping_timeout=20, 
-                close_timeout=20
+                close_timeout=20,
+                ping_interval=10  # 添加ping间隔保持连接活跃
             ) as websocket:
                 print("科大讯飞API连接成功")
                 
@@ -121,19 +126,29 @@ class IFlyTekSpeechClient:
                 async def send_audio():
                     """发送音频数据"""
                     audio_chunk_count = 0
-                    async for audio_chunk in audio_stream:
-                        if len(audio_chunk) > 0:
-                            audio_chunk_count += 1
-                            print(f"发送第{audio_chunk_count}个音频块，大小: {len(audio_chunk)} bytes")
-                            
-                            # 直接发送原始音频数据
-                            await websocket.send(audio_chunk)
-                            print(f"音频数据发送成功 (块{audio_chunk_count})")
-                    
-                    # 发送结束标记
-                    end_tag = '{"end": true}'
-                    await websocket.send(end_tag)
-                    print("结束标记发送成功")
+                    try:
+                        async for audio_chunk in audio_stream:
+                            if len(audio_chunk) > 0:
+                                audio_chunk_count += 1
+                                print(f"发送第{audio_chunk_count}个音频块，大小: {len(audio_chunk)} bytes")
+                                
+                                # 直接发送原始音频数据
+                                try:
+                                    await websocket.send(audio_chunk)
+                                    print(f"音频数据发送成功 (块{audio_chunk_count})")
+                                except websockets.exceptions.ConnectionClosed:
+                                    print("发送音频时连接已关闭")
+                                    break
+                        
+                        # 发送结束标记
+                        end_tag = '{"end": true}'
+                        try:
+                            await websocket.send(end_tag)
+                            print("结束标记发送成功")
+                        except websockets.exceptions.ConnectionClosed:
+                            print("发送结束标记时连接已关闭")
+                    except Exception as e:
+                        print(f"发送音频数据异常: {e}")
                 
                 # 启动音频发送任务
                 send_task = asyncio.create_task(send_audio())
@@ -158,13 +173,25 @@ class IFlyTekSpeechClient:
                             if data:
                                 # 提取纯文本内容
                                 transcript_text = self._extract_text_from_iflytek_result(data)
-                                print(f"识别结果: {transcript_text}")
-                                yield {
-                                    "success": True,
-                                    "transcript": transcript_text,
-                                    "is_final": False,
-                                    "confidence": 0.9
-                                }
+                                print(f"识别结果: '{transcript_text}'")
+                                
+                                # 修复：检查是否为纯标点符号或空内容
+                                cleaned_text = transcript_text.strip()
+                                if cleaned_text and cleaned_text not in ['.', '。', '!', '！', '?', '？']:
+                                    yield {
+                                        "success": True,
+                                        "transcript": transcript_text,
+                                        "is_final": False,
+                                        "confidence": 0.9
+                                    }
+                                else:
+                                    print(f"跳过无效转录内容: '{transcript_text}'")
+                        
+                        if result.get("action") == "end":
+                            print("收到结束响应")
+                            # 修复：完全跳过结束响应，不发送任何转录结果
+                            print("语音转录结束，跳过结束响应")
+                            break
                         
                         if result.get("action") == "error":
                             error_msg = f"API错误: {result.get('code', '未知')} - {result.get('desc', '未知错误')}"
@@ -177,25 +204,28 @@ class IFlyTekSpeechClient:
                         
                         if result.get("action") == "end":
                             print("收到结束响应")
-                            yield {
-                                "success": True,
-                                "transcript": "",
-                                "is_final": True,
-                                "confidence": 1.0
-                            }
+                            # 修复：完全跳过结束响应，不发送任何转录结果
+                            print("语音转录结束，跳过结束响应")
                             break
                             
                     except asyncio.TimeoutError:
                         # 没有新结果，继续等待
                         continue
                     except websockets.exceptions.ConnectionClosed:
-                        print("WebSocket连接关闭")
+                        print("科大讯飞WebSocket连接关闭")
+                        break
+                    except Exception as e:
+                        print(f"接收结果异常: {e}")
                         break
                 
-                # 等待发送任务完成
+                # 等待发送任务完成或取消
                 if send_task and not send_task.done():
-                    await send_task
-                
+                    send_task.cancel()
+                    try:
+                        await send_task
+                    except asyncio.CancelledError:
+                        print("音频发送任务已取消")
+            
         except websockets.exceptions.InvalidURI as e:
             yield {
                 "success": False,

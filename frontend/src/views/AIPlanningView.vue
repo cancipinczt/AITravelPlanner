@@ -139,7 +139,7 @@
             >
               <p>目的地：{{ parsedRequirements.destination }}</p>
               <p>旅行天数：{{ parsedRequirements.duration }}天</p>
-              <p>预算：¥{{ parsedRequirements.budget }}</p>
+<p>预算：¥{{ parsedRequirements.budget }}</p>
               <p>同行人数：{{ parsedRequirements.travelers }}人</p>
             </el-alert>
           </div>
@@ -166,7 +166,7 @@
             <el-button 
               type="success" 
               size="large" 
-              @click="createTripFromPlan"
+@click="createTripFromPlan"
               :loading="creatingTrip"
               :disabled="!tripTitle"
             >
@@ -409,6 +409,9 @@ const loadUserPreferences = async () => {
 // 语音输入功能
 const startVoiceInput = async () => {
   try {
+    // 先清理之前的连接，避免重复连接
+    await stopVoiceInput()
+    
     // 获取麦克风权限
     mediaStream.value = await navigator.mediaDevices.getUserMedia({ 
       audio: {
@@ -451,7 +454,7 @@ const startVoiceInput = async () => {
     
     websocket.value.onopen = () => {
       isWebSocketConnected.value = true
-isRecording.value = true
+      isRecording.value = true
       ElMessage.success('语音输入已开始，请开始说话...')
     }
     
@@ -460,8 +463,11 @@ isRecording.value = true
         const data = JSON.parse(event.data)
         
         if (data.success && data.transcript) {
-          // 将转录结果添加到输入框中
-          planForm.travelRequirements = data.transcript
+          // 修复：只有当转录内容不为空且不是纯标点符号时才更新输入框
+          const trimmedTranscript = data.transcript.trim()
+          if (trimmedTranscript !== '' && trimmedTranscript !== '.' && trimmedTranscript !== '。') {
+            planForm.travelRequirements = data.transcript
+          }
           
           if (data.is_final) {
             ElMessage.success('语音输入完成')
@@ -493,13 +499,8 @@ isRecording.value = true
   }
 }
 
-const stopVoiceInput = () => {
-  // 关闭WebSocket连接
-  if (websocket.value) {
-    websocket.value.close()
-    websocket.value = null
-  }
-  
+const stopVoiceInput = async () => {
+  // 先停止音频处理，再关闭WebSocket
   // 停止音频处理
   if (audioProcessor.value) {
     audioProcessor.value.disconnect()
@@ -516,6 +517,18 @@ const stopVoiceInput = () => {
   if (mediaStream.value) {
     mediaStream.value.getTracks().forEach(track => track.stop())
     mediaStream.value = null
+  }
+  
+  // 最后关闭WebSocket连接
+  if (websocket.value) {
+    if (websocket.value.readyState === WebSocket.OPEN) {
+      // 发送结束标记给后端
+      websocket.value.send('end')
+      // 等待一小段时间确保后端收到结束标记
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    websocket.value.close()
+    websocket.value = null
   }
   
   isRecording.value = false
@@ -754,7 +767,6 @@ const getTagType = (type: string) => {
 .itinerary-content {
   line-height: 1.6;
 }
-
 .budget-content,
 .weather-content,
 .recommendations-content {
