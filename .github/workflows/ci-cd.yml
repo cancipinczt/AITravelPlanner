@@ -45,15 +45,18 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Build backend image
       run: |
         cd backend
-        docker build -t aitravelplanner-backend -f Dockerfile .
+        docker build --no-cache --build-arg CACHE_BUST=$(date +%s) -t aitravelplanner-backend -f Dockerfile .
 
     - name: Build frontend image
       run: |
         cd frontend
-        docker build -t aitravelplanner-frontend -f Dockerfile .
+        docker build --no-cache --build-arg CACHE_BUST=$(date +%s) -t aitravelplanner-frontend -f Dockerfile .
 
     - name: Login to Alibaba Cloud Container Registry
       run: |

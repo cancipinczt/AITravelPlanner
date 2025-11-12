@@ -12,6 +12,9 @@ RUN npm ci
 # 复制源代码
 COPY . .
 
+# 添加构建参数来强制缓存失效
+ARG CACHE_BUST=1
+
 # 构建应用（使用生产环境变量）
 RUN npm run build
 
