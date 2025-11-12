@@ -66,20 +66,20 @@
       
       <!-- 旅行计划列表 -->
       <div v-else-if="travelPlans.length > 0" class="plans-container">
-        <el-table :data="travelPlans" style="width: 100%">
-          <el-table-column prop="title" label="计划标题" min-width="200">
+        <el-table :data="travelPlans" style="width: 100%" :header-cell-style="{ textAlign: 'center' }" :cell-style="{ textAlign: 'center' }">
+          <el-table-column prop="title" label="旅行计划" min-width="120" align="center">
             <template #default="scope">
               <strong>{{ scope.row.title }}</strong>
             </template>
           </el-table-column>
           
-          <el-table-column prop="destination" label="目的地" width="120">
+          <el-table-column prop="destination" label="目的地" width="140" align="center">
             <template #default="scope">
               <el-tag type="primary">{{ scope.row.destination }}</el-tag>
             </template>
           </el-table-column>
           
-          <el-table-column prop="budget" label="预算" width="120" align="right">
+          <el-table-column prop="budget" label="预算" width="140" align="center">
             <template #default="scope">
               <span v-if="scope.row.budget" class="budget-amount">
                 ¥{{ scope.row.budget }}
@@ -88,7 +88,7 @@
             </template>
           </el-table-column>
           
-          <el-table-column label="操作" width="120" align="center">
+          <el-table-column label="操作" width="140" align="center">
             <template #default="scope">
               <el-button 
                 type="primary" 
@@ -208,48 +208,80 @@ const goToAIPlanning = () => {
 
 <style scoped>
 .expense-management {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  min-height: calc(100vh - 64px);
+  background: linear-gradient(135deg, #f8fafc 0%, #e3f2fd 100%);
+  padding: 24px;
 }
 
 .page-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
+  padding: 40px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  color: white;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+  backdrop-filter: blur(10px);
 }
 
 .page-header h2 {
-  color: #409EFF;
-  margin-bottom: 10px;
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  background: linear-gradient(45deg, #fff, #e3f2fd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .page-header p {
-  color: #666;
-  margin: 0;
+  font-size: 18px;
+  opacity: 0.9;
+  font-weight: 500;
 }
 
 .content-card {
-  padding: 20px;
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .budget-summary {
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 
 .stat-card {
-  margin-bottom: 20px;
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #f8fafc 0%, #e3f2fd 100%);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
 }
 
 .stat-content {
   display: flex;
   align-items: center;
-  padding: 10px;
+  gap: 16px;
+  padding: 16px;
 }
 
 .stat-icon {
-  font-size: 36px;
-  color: #409EFF;
-  margin-right: 15px;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
 }
 
 .stat-info {
@@ -259,36 +291,97 @@ const goToAIPlanning = () => {
 .stat-label {
   font-size: 14px;
   color: #666;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
 }
 
 .stat-value {
   font-size: 24px;
-  font-weight: bold;
-  color: #333;
+  font-weight: 700;
+  color: #2c3e50;
 }
 
 .action-bar {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .plans-container {
-  margin-top: 20px;
+  margin-top: 16px;
+}
+
+:deep(.el-table) {
+  border-radius: 12px;
+  overflow: hidden;
+  table-layout: fixed; /* 确保固定布局 */
+}
+
+:deep(.el-table th),
+:deep(.el-table td) {
+  text-align: center !important;
+}
+
+:deep(.el-table th) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+}
+
+:deep(.el-table td) {
+  background: rgba(255, 255, 255, 0.9);
+  word-break: break-word;
 }
 
 .budget-amount {
-  color: #67C23A;
-  font-weight: bold;
+  font-weight: 600;
+  color: #52c41a;
 }
 
 .no-budget {
-  color: #909399;
+  color: #faad14;
   font-style: italic;
 }
 
 .empty-state {
   text-align: center;
-  padding: 40px 0;
-  color: #999;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.empty-state p {
+  font-size: 16px;
+  margin-bottom: 16px;
+}
+
+.loading-state,
+.error-state {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .expense-management {
+    padding: 16px;
+  }
+  
+  .page-header {
+    padding: 24px 0;
+    margin-bottom: 24px;
+  }
+  
+  .page-header h2 {
+    font-size: 28px;
+  }
+  
+  .stat-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+  
+  .action-bar {
+    justify-content: center;
+  }
 }
 </style>

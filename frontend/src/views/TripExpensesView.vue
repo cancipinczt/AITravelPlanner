@@ -1,12 +1,14 @@
 <template>
   <div class="trip-expenses">
     <div class="page-header">
-      <el-button type="text" @click="goBack" class="back-button">
+      <el-button type="primary" @click="goBack" class="back-button">
         <el-icon><arrow-left /></el-icon>
-        返回费用管理
+        返回
       </el-button>
-      <h2>{{ tripInfo.title }} - 费用管理</h2>
-      <p>目的地：{{ tripInfo.destination }}</p>
+      <div class="header-text">
+        <h2>{{ tripInfo.title }} - 费用管理</h2>
+        <p>目的地：{{ tripInfo.destination }}</p>
+      </div>
     </div>
     
     <el-card class="content-card">
@@ -344,31 +346,68 @@ const goBack = () => {
 
 <style scoped>
 .trip-expenses {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  min-height: calc(100vh - 64px);
+  background: linear-gradient(135deg, #f8fafc 0%, #e3f2fd 100%);
+  padding: 24px;
 }
 
 .page-header {
-  margin-bottom: 30px;
+  position: relative;
+  margin-bottom: 32px;
+  padding: 30px 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  color: white;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+  backdrop-filter: blur(10px);
+  text-align: center;
 }
 
 .back-button {
-  margin-bottom: 10px;
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
-.page-header h2 {
-  color: #409EFF;
-  margin-bottom: 10px;
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-50%); /* 移除translateY(-1px) */
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
 }
 
-.page-header p {
-  color: #666;
-  margin: 0;
+.header-text h2 {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  background: linear-gradient(45deg, #fff, #e3f2fd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-text p {
+  font-size: 18px;
+  opacity: 0.9;
+  font-weight: 500;
 }
 
 .content-card {
-  padding: 20px;
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 32px;
 }
 
 .budget-summary {
@@ -376,19 +415,33 @@ const goBack = () => {
 }
 
 .stat-card {
-  margin-bottom: 20px;
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
 }
 
 .stat-content {
   display: flex;
   align-items: center;
-  padding: 10px;
+  padding: 20px;
 }
 
 .stat-icon {
   font-size: 36px;
-  color: #409EFF;
+  color: #667eea;
   margin-right: 15px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .stat-info {
@@ -413,10 +466,35 @@ const goBack = () => {
 
 .action-bar {
   margin-bottom: 20px;
+  display: flex;
+  gap: 12px;
 }
 
 .expenses-container {
   margin-top: 20px;
+}
+
+:deep(.el-table) {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+:deep(.el-table__header) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+:deep(.el-table th) {
+  background: transparent !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+:deep(.el-table tr) {
+  transition: all 0.3s ease;
+}
+
+:deep(.el-table tr:hover) {
+  background: rgba(102, 126, 234, 0.05);
 }
 
 .amount {
@@ -430,12 +508,71 @@ const goBack = () => {
 
 .empty-state {
   text-align: center;
-  padding: 40px 0;
+  padding: 60px 0;
   color: #999;
 }
 
 .empty-tip {
   font-size: 14px;
   margin-top: 10px;
+  color: #666;
+}
+
+/* 按钮样式优化 */
+:deep(.el-button) {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+:deep(.el-button--primary) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+:deep(.el-button--primary:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+/* 对话框样式优化 */
+:deep(.el-dialog) {
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+:deep(.el-dialog__header) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 16px 16px 0 0;
+  padding: 20px;
+}
+
+:deep(.el-dialog__title) {
+  color: white;
+  font-weight: 600;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .trip-expenses {
+    padding: 16px;
+  }
+  
+  .page-header {
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  
+  .back-button {
+    position: static;
+    transform: none;
+    margin-bottom: 16px;
+  }
+  
+  .header-text h2 {
+    font-size: 28px;
+  }
 }
 </style>

@@ -384,7 +384,7 @@ const useCurrentLocation = (type: 'start' | 'end') => {
   
   navigator.geolocation.getCurrentPosition(
     (position) => {
-      const { latitude, longitude } = position.coords
+const { latitude, longitude } = position.coords
       
       // 使用逆地理编码获取地址
       const geocoder = new window.AMap.Geocoder()
@@ -599,176 +599,189 @@ onUnmounted(() => {
 </script>
 <style scoped>
 .map-demo-container {
-  padding: 20px;
-  max-width: 1400px;
-  margin: 0 auto;
+  min-height: calc(100vh - 64px);
+  background: linear-gradient(135deg, #f8fafc 0%, #e3f2fd 100%);
+  padding: 24px;
 }
 
 h2 {
   text-align: center;
-  margin-bottom: 30px;
-  color: #409EFF;
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  padding: 40px 0;
 }
 
-/* 地图板块样式 */
 .map-section {
-  margin-bottom: 30px;
-  height: 500px; /* 添加固定高度 */
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
+  height: 400px;
+  margin-bottom: 24px;
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
 
-/* 功能板块样式 */
 .function-section {
-  display: flex;
-  gap: 20px;
-  margin-top: 20px;
-}
-.left-panel, .right-panel {
-  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 24px;
 }
 
-.search-card, .route-card {
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  height: 100%;
+.search-card,
+.route-card {
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .card-header {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c3e50;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
 }
 
-/* 搜索表单样式 */
-.search-form {
-  margin-bottom: 20px;
-}
-.search-input {
-  margin-bottom: 15px;
+.card-header::before {
+  content: "🔍";
 }
 
-/* 路径规划表单样式 */
+.route-card .card-header::before {
+  content: "🗺️";
+}
+
+.search-form,
 .route-form {
-  margin-bottom: 20px;
+  padding: 16px 0;
 }
 
-.route-input-group {
-  margin-bottom: 15px;
-}
-
-.route-label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
-  color: #606266;
-}
-
+.search-input,
 .route-input {
-  width: 100%;
+  margin-bottom: 16px;
 }
 
-.route-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.route-button, .clear-button {
-  flex: 1;
-}
-
-/* 状态提示样式 */
 .status-info,
 .status-error {
-  margin-top: 10px;
+  margin: 12px 0;
 }
 
-/* 搜索结果样式 */
 .search-results {
-  margin-top: 20px;
-  border-top: 1px solid #e4e7ed;
-  padding-top: 15px;
-}
-
-.search-results h4 {
-  margin-bottom: 15px;
-  color: #606266;
-}
-
-.result-list {
+  margin-top: 16px;
   max-height: 300px;
   overflow-y: auto;
 }
 
+.search-results h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #2c3e50;
+}
+
+.result-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .result-item {
   padding: 12px;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
-  margin-bottom: 10px;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid #667eea;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
 }
 
 .result-item:hover {
-  border-color: #409EFF;
-  background-color: #f5f7fa;
+  background: rgba(102, 126, 234, 0.1);
+  transform: translateX(4px);
 }
 
 .result-name {
-  font-weight: bold;
-  color: #303133;
-  margin-bottom: 5px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 4px;
 }
 
 .result-address {
   font-size: 12px;
-  color: #909399;
+  color: #666;
 }
 
-/* 路径规划结果样式 */
+.route-input-group {
+  margin-bottom: 16px;
+}
+
+.route-label {
+  display: block;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 6px;
+}
+
+.route-actions {
+  display: flex;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.route-button,
+.clear-button {
+  flex: 1;
+}
+
 .route-result {
-  margin-top: 20px;
-  border-top: 1px solid #e4e7ed;
-  padding-top: 15px;
-}
-
-.route-result h4 {
-  margin-bottom: 15px;
-  color: #606266;
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 12px;
 }
 
 .route-info {
-  margin-bottom: 15px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .route-item {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 8px;
-  padding: 8px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
+  align-items: center;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .route-label {
-  font-weight: 500;
-  color: #606266;
+  font-weight: 600;
+  color: #667eea;
+  margin: 0;
 }
 
 .route-value {
-  color: #303133;
-  font-weight: bold;
+  font-weight: 600;
+  color: #2c3e50;
 }
 
 .route-steps {
-  margin-top: 15px;
+  margin-top: 16px;
 }
 
 .route-steps h5 {
-  margin-bottom: 10px;
-  color: #606266;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #2c3e50;
 }
 
 .steps-list {
@@ -778,27 +791,26 @@ h2 {
 
 .step-item {
   display: flex;
-  align-items: flex-start;
-  margin-bottom: 10px;
-  padding: 10px;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
-  background-color: #fafafa;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  margin-bottom: 8px;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .step-number {
-  background: #409EFF;
-  color: white;
-  border-radius: 50%;
   width: 24px;
   height: 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  font-weight: bold;
-  margin-right: 10px;
-  flex-shrink: 0;
+  font-weight: 600;
 }
 
 .step-content {
@@ -806,13 +818,44 @@ h2 {
 }
 
 .step-instruction {
-  font-size: 14px;
-  color: #303133;
-  margin-bottom: 4px;
+  font-size: 13px;
+  color: #2c3e50;
+  margin-bottom: 2px;
 }
 
 .step-distance {
-  font-size: 12px;
-  color: #909399;
+  font-size: 11px;
+  color: #666;
+}
+
+/* 响应式设计 */
+@media (max-width: 1024px) {
+  .function-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .map-demo-container {
+    padding: 16px;
+  }
+  
+  h2 {
+    font-size: 28px;
+    padding: 24px 0;
+    margin-bottom: 24px;
+  }
+  
+  .map-section {
+    height: 300px;
+  }
+  
+  .route-actions {
+    flex-direction: column;
+  }
+  
+  .route-info {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

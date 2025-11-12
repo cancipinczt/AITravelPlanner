@@ -154,17 +154,116 @@ watch([() => registerForm.username, () => registerForm.password, () => registerF
 
 <style scoped>
 .register-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 60vh;
   padding: 20px;
 }
 
 .register-card {
-  width: 400px;
-  padding: 20px;
+  width: 420px;
+  border-radius: 20px;
+  border: none;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(15px);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 40px;
   position: relative;
+  overflow: hidden;
+}
+
+.register-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea, #764ba2, #667eea);
+}
+
+.register-card h2 {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+:deep(.el-form-item) {
+  margin-bottom: 24px;
+}
+
+:deep(.el-form-item__label) {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+}
+
+:deep(.el-input) {
+  border-radius: 10px;
+}
+
+:deep(.el-input__wrapper) {
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  transition: all 0.3s ease;
+}
+
+:deep(.el-input__wrapper:hover) {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.4);
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  border-color: #667eea;
+}
+
+.button-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.register-button {
+  height: 48px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(82, 196, 26, 0.3);
+  transition: all 0.3s ease;
+}
+
+.register-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(82, 196, 26, 0.4);
+}
+
+.login-button {
+  height: 48px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  color: #667eea;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.login-button:hover {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: #667eea;
+  transform: translateY(-1px);
 }
 
 .error-message {
@@ -172,14 +271,30 @@ watch([() => registerForm.username, () => registerForm.password, () => registerF
 }
 
 :deep(.el-alert) {
-  margin-bottom: 0;
+  border-radius: 10px;
+  border: none;
 }
 
-:deep(.el-form-item) {
-  margin-bottom: 20px;
+:deep(.el-alert--error) {
+  background: rgba(245, 108, 108, 0.1);
+  color: #f56c6c;
 }
 
-:deep(.el-button) {
-  height: 40px;
+/* 响应式设计 */
+@media (max-width: 480px) {
+  .register-container {
+    padding: 16px;
+  }
+  
+  .register-card {
+    width: 100%;
+    max-width: 360px;
+    padding: 32px 24px;
+  }
+  
+  .register-card h2 {
+    font-size: 28px;
+    margin-bottom: 24px;
+  }
 }
 </style>

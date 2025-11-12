@@ -18,6 +18,7 @@
                 :rows="3"
                 placeholder="请输入旅行的目的地、天数、预算、同行人数，例如：日本东京，7天，预算15000元，2人同行"
                 :autosize="{ minRows: 3, maxRows: 6 }"
+                style="width: 100%;"
               />
               <!-- 语音输入按钮 -->
               <div class="voice-input-container">
@@ -313,7 +314,6 @@ const showPreferenceDialog = ref(false)
 const selectedPreferenceId = ref('')
 const creatingTrip = ref(false)
 const creatingPlan = ref(false)
-
 // 添加解析相关状态
 const parsing = ref(false)
 const parsedRequirements = ref({
@@ -450,7 +450,7 @@ const startVoiceInput = async () => {
     audioProcessor.value.connect(audioContext.value.destination)
     
     // 创建WebSocket连接
-    websocket.value = new WebSocket('ws://localhost:8000/api/v1/speech/transcribe')
+websocket.value = new WebSocket('ws://localhost:8000/api/v1/speech/transcribe')
     
     websocket.value.onopen = () => {
       isWebSocketConnected.value = true
@@ -503,7 +503,7 @@ const stopVoiceInput = async () => {
   // 先停止音频处理，再关闭WebSocket
   // 停止音频处理
   if (audioProcessor.value) {
-    audioProcessor.value.disconnect()
+audioProcessor.value.disconnect()
     audioProcessor.value = null
   }
   
@@ -689,313 +689,237 @@ const getTagType = (type: string) => {
 
 <style scoped>
 .ai-planning {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  min-height: calc(100vh - 64px);
+  background: linear-gradient(135deg, #f8fafc 0%, #e3f2fd 100%);
+  padding: 24px;
 }
 
 .page-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
+  padding: 40px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  color: white;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+  backdrop-filter: blur(10px);
 }
 
 .page-header h2 {
-  color: #409EFF;
-  margin-bottom: 10px;
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  background: linear-gradient(45deg, #fff, #e3f2fd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .page-header p {
-  color: #666;
-  margin: 0;
+  font-size: 18px;
+  opacity: 0.9;
+  font-weight: 500;
 }
 
 .content-card {
-  padding: 30px;
-}
-
-.input-section {
-  margin-bottom: 30px;
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .input-section h3 {
-  color: #333;
-  margin-bottom: 20px;
-  font-size: 18px;
-}
-
-.input-hint {
-  margin-top: 8px;
-  padding: 8px 12px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
-  border-left: 4px solid #409EFF;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.input-hint p {
-  margin: 4px 0;
-  font-size: 12px;
-  color: #666;
-}
-
-.section-divider {
-  height: 20px;
-  margin: 20px 0;
-  border-bottom: 1px solid #e4e7ed;
-}
-
-.result-section {
-  margin-top: 30px;
-}
-
-.result-section h3 {
-  color: #333;
-  margin-bottom: 20px;
-  font-size: 18px;
-}
-
-.plan-section {
-  margin-bottom: 20px;
-}
-
-.section-title {
-  font-weight: bold;
-  font-size: 16px;
-}
-
-.itinerary-content {
-  line-height: 1.6;
-}
-.budget-content,
-.weather-content,
-.recommendations-content {
-  padding: 10px 0;
-}
-
-.error-message {
-  margin-top: 20px;
-}
-
-/* 偏好选择区域样式 */
-.preference-loading,
-.preference-error {
-  margin-bottom: 15px;
-}
-
-.preference-selection {
-  display: flex;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.preference-details {
-  width: 100%;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
-  border-radius: 8px;
-  padding: 15px;
-  margin-top: 15px;
-  border: 1px solid #e4e7ed;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-}
-
-.preference-details:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-}
-
-.preference-info h4 {
-  margin: 0 0 10px 0;
-  color: #409EFF;
-  font-size: 16px;
+  font-size: 24px;
   font-weight: 600;
-}
-
-.preference-content {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.preference-item {
+  color: #2c3e50;
+  margin-bottom: 24px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.preference-item strong {
-  min-width: 80px;
-  color: #606266;
-  font-weight: 600;
-  line-height: 1.5;
+.input-section h3::before {
+  content: "💬";
+  font-size: 20px;
 }
 
-.preference-item span {
-  flex: 1;
-  color: #303133;
-  line-height: 1.5;
-}
-
-/* Markdown样式 */
-.markdown-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.markdown-body h1,
-.markdown-body h2,
-.markdown-body h3,
-.markdown-body h4,
-.markdown-body h5,
-.markdown-body h6 {
-  margin-top: 24px;
-  margin-bottom: 16px;
-  font-weight: 600;
-  line-height: 1.25;
-}
-
-.markdown-body p {
-  margin-bottom: 16px;
-}
-
-.markdown-body ul,
-.markdown-body ol {
-  padding-left: 2em;
-  margin-bottom: 16px;
-}
-
-.markdown-body li {
-  margin-bottom: 8px;
-}
-
-.markdown-body code {
-  padding: 0.2em 0.4em;
-  margin: 0;
-  font-size: 85%;
-  background-color: rgba(175, 184, 193, 0.2);
-  border-radius: 6px;
-}
-
-.markdown-body pre {
-  padding: 16px;
-  overflow: auto;
-  font-size: 85%;
-  line-height: 1.45;
-  background-color: #f6f8fa;
-  border-radius: 6px;
-  margin-bottom: 16px;
-}
-
-.markdown-body pre code {
-  background: none;
-  padding: 0;
-}
-
-/* 语音输入样式 */
 .travel-requirements-input {
   position: relative;
+  width: 100%; /* 确保父容器宽度为100% */
+}
+
+/* 确保Element Plus的textarea输入框宽度为100% */
+:deep(.travel-requirements-input .el-textarea) {
   width: 100%;
+}
+
+:deep(.travel-requirements-input .el-textarea .el-textarea__inner) {
+  width: 100% !important;
 }
 
 .voice-input-container {
   position: absolute;
-  right: 30px;
-  top: 10px;
+  right: 8px;
+  bottom: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
-  z-index: 10;
 }
 
 .voice-btn {
-  width: 32px;
-  height: 32px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
 }
+
+.voice-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 .recording-status {
   display: flex;
   align-items: center;
   gap: 6px;
+  color: #ff4757;
   font-size: 12px;
-  color: #f56c6c;
+  font-weight: 600;
 }
 
 .recording-dot {
   width: 8px;
   height: 8px;
-  background-color: #f56c6c;
+  background: #ff4757;
   border-radius: 50%;
   animation: pulse 1.5s infinite;
 }
 
 @keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-  100% {
-    opacity: 1;
-  }
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
 }
 
-/* Element Plus组件样式覆盖 */
-:deep(.el-textarea__inner) {
-  padding-right: 50px;
-  width: calc(100% - 20px);
-  margin-right: 20px;
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #667eea, transparent);
+  margin: 24px 0;
 }
 
-:deep(.el-form-item__content) {
-  width: 100%;
+.preference-selection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-:deep(.el-textarea) {
-  width: 100%;
+.preference-details {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 12px;
+  border-left: 4px solid #667eea;
 }
 
-/* 创建旅行计划按钮样式 */
-.create-trip-section {
-  text-align: center;
-  margin-bottom: 30px;
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e4e7ed;
+.preference-info h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
 }
 
-.create-trip-hint {
-  margin-top: 10px;
-  color: #666;
+.preference-item {
+  margin-bottom: 6px;
   font-size: 14px;
 }
+
+.preference-item strong {
+  color: #667eea;
+}
+
 .parsed-info {
-  margin: 20px 0;
-  background-color: #f0f9ff;
-  border: 1px solid #e1f5fe;
-  border-radius: 4px;
-  padding: 15px;
+  margin-top: 16px;
 }
 
-.parsed-info p {
-  margin: 5px 0;
-  font-size: 14px;
+.result-section h3 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.result-section h3::before {
+  content: "✨";
+  font-size: 20px;
+}
+
+.create-trip-section {
+  background: linear-gradient(135deg, #f8fafc 0%, #e3f2fd 100%);
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(102, 126, 234, 0.1);
 }
 
 .trip-name-input {
-  margin-bottom: 15px;
+  margin-bottom: 16px;
+}
+
+.create-trip-hint {
+  font-size: 12px;
+  color: #666;
+  margin-top: 8px;
   text-align: center;
 }
 
-.trip-name-input .el-form-item {
-  margin-bottom: 0;
+.plan-section {
+  margin-bottom: 20px;
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
-.trip-name-input .el-form-item__label {
-  font-weight: bold;
-  color: #333;
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
 }
 
+.itinerary-content {
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.budget-content {
+  padding: 16px 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .ai-planning {
+    padding: 16px;
+  }
+  
+  .page-header {
+    padding: 24px 0;
+    margin-bottom: 24px;
+  }
+  
+  .page-header h2 {
+    font-size: 28px;
+  }
+  
+  .preference-selection {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .voice-input-container {
+    position: static;
+    margin-top: 8px;
+    justify-content: center;
+  }
+}
 </style>
