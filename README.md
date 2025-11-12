@@ -1,67 +1,73 @@
 # AI旅行规划师 (AI Travel Planner)
 
 AI4SE homework3
-基于AI的智能旅行规划Web应用，提供个性化的旅行路线规划、费用管理和实时辅助功能。
+基于AI的智能旅行规划Web应用，提供个性化的旅行路线规划、费用管理和地图导航等功能。
+
+## 项目地址
+**GitHub仓库**: https://github.com/cancipinczt/AITravelPlanner
+
+## 核心功能
+
+1. **智能行程规划**: 支持语音/文字输入，AI自动生成个性化旅行路线
+2. **费用预算管理**: AI预算分析，语音记录旅行开销
+3. **地图导航**: 基于高德地图，可以搜索地点，导航路线
+4. **用户管理**: 注册登录系统，云端数据同步
 
 ## 技术栈
 
 ### 前端
-
-- **框架**: Vue.js 3 + TypeScript
-- **UI组件**: Element Plus
-- **构建工具**: Vite
-- **地图服务**: 高德地图API
-- **语音识别**: 科大讯飞API
-- **状态管理**: Pinia
-- **路由**: Vue Router
+- Vue.js 3 + TypeScript + Element Plus
+- 高德地图API + 科大讯飞语音识别API
 
 ### 后端
-
-- **框架**: Python + FastAPI
-- **数据库**: PostgreSQL + Supabase
-- **认证**: Supabase Auth
-- **AI服务**: 阿里云百炼平台
-- **文件存储**: 阿里云OSS
+- Python + FastAPI + Supabase
+- 阿里云百炼平台AI服务
 
 ### 部署
+- Docker + GitHub Actions + 阿里云容器镜像服务
 
-- **容器化**: Docker + Docker Compose
-- **CI/CD**: GitHub Actions
-- **镜像仓库**: 阿里云容器镜像服务
+## 快速部署
 
-## 项目结构
-
-AITravelPlanner/
-├── frontend/ # 前端项目
-├── backend/ # 后端项目
-├── docker-compose.yml # 开发环境
-├── .github/ # CI/CD配置
-└── docs/ # 项目文档
-
-## 快速开始
-
-### 开发环境
+### 使用Docker Compose部署
 
 ```bash
-# 克隆项目
-git clone <repository-url>
-cd AITravelPlanner
+# 下载docker-compose.prod.yml文件
+wget https://raw.githubusercontent.com/cancipinczt/AITravelPlanner/main/docker-compose.prod.yml
 
-# 启动开发环境
-docker-compose up -d
-```
-
-### 生产部署
-
-```bash
-# 构建生产镜像
+# 启动服务
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-## API文档
+## API Key配置
 
-访问 `http://localhost:8000/docs` 查看后端API文档。
+**重要**: 所有必要的API密钥已在docker-compose.prod.yml中预配置，无需额外设置。
+
+**已配置的密钥包括**：
+- 阿里云百炼平台AI服务密钥
+- 高德地图API密钥  
+- 科大讯飞语音识别API密钥
+- Supabase数据库配置
+- 应用安全密钥
+
+**部署时直接使用**：
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+应用将自动使用预配置的密钥正常运行。
+
+## 访问地址
+- 前端应用: http://localhost:80 或 http://localhost
+- 后端API文档: http://localhost:8000/docs
+
+## 项目结构
+```
+AITravelPlanner/ 
+├── frontend/ # Vue.js前端 
+├── backend/ # FastAPI后端
+├── .github/workflows/ # CI/CD配置 
+└── docker-compose.prod.yml # 生产环境配置
+```
 
 ## 许可证
-
 MIT License
