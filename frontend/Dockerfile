@@ -14,6 +14,8 @@ COPY . .
 
 # 添加构建参数来强制缓存失效
 ARG CACHE_BUST=1
+ARG BUILD_DATE=unknown
+ENV BUILD_DATE=${BUILD_DATE}
 
 # 构建应用（使用生产环境变量）
 RUN npm run build

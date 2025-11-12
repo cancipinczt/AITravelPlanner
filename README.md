@@ -60,8 +60,8 @@ docker-compose -f docker-compose.prod.yml up -d
 
 应用将自动使用预配置的密钥正常运行。
 
-## 访问地址
-- 前端应用: http://localhost:80 或 http://localhost
+## 镜像启动后的访问地址
+- 前端应用: http://localhost:3000
 - 后端API文档: http://localhost:8000/docs
 
 ## 项目结构
